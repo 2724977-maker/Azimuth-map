@@ -1200,6 +1200,25 @@ svg.leaflet-image-layer.leaflet-interactive path {
         .hud-hidden .panel { display: none; }
         .hud-hidden .fab-group.hideable { opacity: 0; transform: translateX(70px); pointer-events: none; }
 
+        /* ---------- Tiles unavailable notice ---------- */
+        .tile-notice {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -60%);
+            width: calc(100% - 40px);
+            max-width: 380px;
+            z-index: 22;
+            padding: 20px;
+            border-radius: var(--r-lg);
+            text-align: center;
+            font-size: 0.9rem;
+            line-height: 1.45;
+        }
+        .tile-notice strong { display: block; font-size: 1.02rem; margin-bottom: 6px; }
+        .tile-notice p { margin: 0 0 14px; color: var(--muted); }
+        .tile-notice .btn { height: 40px; font-size: 0.86rem; }
+
         /* ---------- Toast ---------- */
         .toast {
             position: fixed;
@@ -1490,6 +1509,12 @@ svg.leaflet-image-layer.leaflet-interactive path {
     </form>
 </footer>
 
+<div class="tile-notice glass" id="tileNotice" hidden role="alert">
+    <strong>Мапа не завантажується</strong>
+    <p>Тайли мапи не отримано з інтернету. Якщо ви відкрили файл у застосунку Claude чи іншому переглядачі файлів, відкрийте сторінку в браузері (Chrome, Safari) — там мапа працює.</p>
+    <button class="btn primary" type="button" id="tileRetryBtn">Спробувати ще раз</button>
+</div>
+
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script>
@@ -1770,11 +1795,15 @@ svg.leaflet-image-layer.leaflet-interactive path {
     if (!LAYERS[state.layer]) state.layer = 'osm';
 
     // Якщо джерело тайлів недоступне (блокування, ліміт, немає мережі) — автоматично перемикаємось на інше.
+    const tileNotice = document.getElementById('tileNotice');
     const tileStats = {};
     const failedLayers = new Set();
     for (const key of LAYER_ORDER) {
         tileStats[key] = { ok: 0, err: 0 };
-        LAYERS[key].layer.on('tileload', () => { tileStats[key].ok++; });
+        LAYERS[key].layer.on('tileload', () => {
+            tileStats[key].ok++;
+            tileNotice.hidden = true;
+        });
         LAYERS[key].layer.on('tileerror', () => {
             const st = tileStats[key];
             st.err++;
@@ -1785,7 +1814,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
                 setLayer(next);
                 toast(`Шар «${LAYERS[key].name}» недоступний — увімкнено «${LAYERS[next].name}»`);
             } else {
-                toast('Тайли мапи не завантажуються. Перевірте підключення до інтернету');
+                tileNotice.hidden = false;
             }
         });
     }
@@ -1800,7 +1829,14 @@ svg.leaflet-image-layer.leaflet-interactive path {
     }
 
     LAYERS[state.layer].layer.addTo(map);
-    window.addEventListener('online', () => failedLayers.clear());
+
+    function retryTiles() {
+        failedLayers.clear();
+        tileNotice.hidden = true;
+        setLayer(LAYER_ORDER[0]);
+    }
+    document.getElementById('tileRetryBtn').addEventListener('click', retryTiles);
+    window.addEventListener('online', retryTiles);
 
     L.control.scale({ imperial: false, position: 'bottomleft', maxWidth: 120 }).addTo(map);
     map.attributionControl.setPrefix('<a href="https://leafletjs.com" target="_blank" rel="noopener">Leaflet</a>');
