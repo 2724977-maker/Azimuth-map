@@ -412,12 +412,43 @@
             right: 68px;
             bottom: calc(var(--sheet-h) + 14px);
             z-index: 29;
-            width: 220px;
+            width: 268px;
+            max-width: calc(100% - 84px);
+            max-height: calc(100vh - var(--safe-t) - var(--sheet-h) - 90px);
+            max-height: calc(100dvh - var(--safe-t) - var(--sheet-h) - 90px);
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
             border-radius: var(--r-lg);
             padding: 8px;
             animation: drop 0.25s var(--ease);
         }
         .layers-pop .eyebrow { padding: 6px 8px 8px; }
+        .key-box {
+            margin-top: 6px;
+            padding: 10px 8px 4px;
+            border-top: 1px solid var(--line);
+        }
+        .key-box .eyebrow { padding: 0 0 8px; }
+        .key-row { display: flex; gap: 6px; }
+        .key-row input {
+            flex: 1;
+            min-width: 0;
+            height: 36px;
+            padding: 0 12px;
+            border-radius: 12px;
+            border: 1.5px solid transparent;
+            background: var(--fill);
+            color: var(--ink);
+            font: 600 0.8rem var(--font-num);
+            outline: 0;
+            -webkit-user-select: text;
+            user-select: text;
+        }
+        .key-row input:focus { border-color: var(--accent); background: var(--accent-soft); }
+        .key-row .chip { height: 36px; background: var(--primary); color: var(--primary-ink); }
+        .key-note { margin: 8px 0 4px; font-size: 0.74rem; line-height: 1.45; color: var(--muted); }
+        .key-note a, .key-note button { color: var(--accent); font-weight: 700; text-decoration: none; }
+        .key-note.ok { color: var(--ink-2); }
         .layer-opt {
             width: 100%;
             display: flex;
@@ -902,6 +933,14 @@
 <div class="layers-pop glass" id="layersPop" hidden role="radiogroup" aria-label="Шар мапи">
     <div class="eyebrow">Шар мапи</div>
     <div id="layerOptions"></div>
+    <div class="key-box">
+        <div class="eyebrow">Ключ Visicom</div>
+        <form class="key-row" id="visicomKeyForm" autocomplete="off">
+            <input type="text" id="visicomKeyInput" placeholder="Вставте API-ключ" spellcheck="false" autocapitalize="off" aria-label="API-ключ Visicom">
+            <button class="chip" type="submit">Зберегти</button>
+        </form>
+        <p class="key-note" id="visicomKeyNote"></p>
+    </div>
 </div>
 
 <!-- Instrument sheet -->
@@ -993,6 +1032,10 @@
 
     /* ================= Constants ================= */
     var STORAGE_KEY = 'azimuth-map:v2';
+    // API-ключ Visicom Tiles (https://api.visicom.ua). Якщо вписати його сюди, мапа Візіком
+    // працюватиме без напису про обмеження для всіх. Інакше ключ можна ввести в меню шарів.
+    var VISICOM_KEY = '';
+    var VISICOM_REGISTER_URL = 'https://api.visicom.ua/accounts/forms?action=register_form';
     var EARTH_R = 6378137;
     var DEFAULT_VIEW = { center: [48.73723, 37.58702], zoom: 16 };
     var COLORS = ['#ff5b2e', '#2f6bff', '#13a35b', '#9b51e0', '#f2a900', '#00a3bf', '#e8417e', '#5b6b7f'];
@@ -1010,6 +1053,7 @@
         coordHit: $('coordHit'), coordHitText: $('coordHitText'), searchResults: $('searchResults'),
         zoomInBtn: $('zoomInBtn'), zoomOutBtn: $('zoomOutBtn'),
         layerBtn: $('layerBtn'), layersPop: $('layersPop'), layerOptions: $('layerOptions'),
+        visicomKeyForm: $('visicomKeyForm'), visicomKeyInput: $('visicomKeyInput'), visicomKeyNote: $('visicomKeyNote'),
         locateBtn: $('locateBtn'), hudBtn: $('hudBtn'), hudIcon: $('hudIcon'),
         sheet: $('sheet'), grabber: $('grabber'), station: $('station'), pointText: $('pointText'),
         copyPointBtn: $('copyPointBtn'), clearPointBtn: $('clearPointBtn'),
@@ -1038,6 +1082,7 @@
                 sectors: state.sectors,
                 colorSeq: state.colorSeq,
                 layer: state.layer,
+                visicomKey: state.visicomKey === VISICOM_KEY ? '' : state.visicomKey,
                 compact: state.compact,
                 inputs: { az: el.azInput.value, dist: el.distInput.value, width: el.widthInput.value },
                 view: { center: [c.lat, c.lng], zoom: map.getZoom() }
@@ -1171,6 +1216,7 @@
         sectors: Array.isArray(saved.sectors) ? saved.sectors.filter(validSector) : [],
         colorSeq: isNum(saved.colorSeq) ? saved.colorSeq : 0,
         layer: saved.layer || 'osm',
+        visicomKey: typeof saved.visicomKey === 'string' && saved.visicomKey ? saved.visicomKey : VISICOM_KEY,
         compact: !!saved.compact,
         selected: null,
         hud: true,
@@ -1214,7 +1260,7 @@
         },
         visicom: {
             name: 'Візіком', note: 'Українська мапа', thumb: 'linear-gradient(135deg,#eef3e6 0 40%,#c9d9a8 40% 55%,#eef3e6 55%)',
-            layer: L.tileLayer('https://tms{s}.visicom.ua/2.0.0/planet3/base/{z}/{x}/{y}.png?lang=uk', {
+            layer: L.tileLayer(visicomUrl(state.visicomKey), {
                 attribution: 'Дані карт © АТ «<a href="https://api.visicom.ua/" target="_blank" rel="noopener">Візіком</a>»',
                 subdomains: '123', tms: true, minZoom: 2, maxZoom: 21, maxNativeZoom: 19
             })
@@ -1228,6 +1274,10 @@
         }
     };
     var LAYER_ORDER = ['osm', 'esri', 'visicom', 'satellite'];
+
+    function visicomUrl(key) {
+        return 'https://tms{s}.visicom.ua/2.0.0/planet3/base/{z}/{x}/{y}.png?lang=uk' + (key ? '&key=' + encodeURIComponent(key) : '');
+    }
     if (!LAYERS[state.layer]) state.layer = 'osm';
 
     // Якщо джерело тайлів недоступне (блокування, ліміт, немає мережі) — автоматично перемикаємось на інше.
@@ -2191,18 +2241,73 @@
             var text = document.createElement('span');
             text.textContent = info.name;
             var note = document.createElement('small');
-            note.textContent = info.note;
+            note.textContent = key === 'visicom' ? (state.visicomKey ? 'Ключ додано' : 'Потрібен API-ключ') : info.note;
             text.appendChild(note);
             b.appendChild(thumb);
             b.appendChild(text);
             b.addEventListener('click', function () {
                 failedLayers = {};
                 setLayer(key);
+                if (key === 'visicom' && !state.visicomKey) {
+                    el.visicomKeyInput.focus();
+                    el.visicomKeyInput.scrollIntoView({ block: 'nearest' });
+                    return;
+                }
                 closeLayers();
             });
             el.layerOptions.appendChild(b);
         });
     }
+
+    function renderVisicomKey() {
+        el.visicomKeyInput.value = state.visicomKey || '';
+        var note = el.visicomKeyNote;
+        note.textContent = '';
+        note.classList.toggle('ok', !!state.visicomKey);
+        if (state.visicomKey) {
+            note.appendChild(document.createTextNode('Ключ збережено на цьому пристрої. '));
+            var del = document.createElement('button');
+            del.type = 'button';
+            del.textContent = 'Видалити';
+            del.addEventListener('click', function () { setVisicomKey(''); });
+            note.appendChild(del);
+        } else {
+            note.appendChild(document.createTextNode('Без ключа Visicom показує на мапі напис про обмеження. Ключ безкоштовно видають після '));
+            var a = document.createElement('a');
+            a.href = VISICOM_REGISTER_URL;
+            a.target = '_blank';
+            a.rel = 'noopener';
+            a.textContent = 'реєстрації на api.visicom.ua';
+            note.appendChild(a);
+            note.appendChild(document.createTextNode('.'));
+        }
+    }
+
+    function setVisicomKey(key) {
+        state.visicomKey = key || VISICOM_KEY;
+        LAYERS.visicom.layer.setUrl(visicomUrl(state.visicomKey));
+        tileStats.visicom.ok = 0;
+        tileStats.visicom.err = 0;
+        failedLayers = {};
+        renderVisicomKey();
+        renderLayerOptions();
+        saveState();
+    }
+
+    el.visicomKeyForm.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var key = el.visicomKeyInput.value.replace(/\s+/g, '');
+        if (!key) {
+            toast('Вставте ключ, отриманий на api.visicom.ua');
+            el.visicomKeyInput.focus();
+            return;
+        }
+        el.visicomKeyInput.blur();
+        setVisicomKey(key);
+        if (state.layer !== 'visicom') setLayer('visicom');
+        closeLayers();
+        toast('Ключ Visicom збережено');
+    });
 
     function closeLayers() {
         el.layersPop.hidden = true;
@@ -2214,6 +2319,7 @@
         if (open) {
             closePanels();
             renderLayerOptions();
+            renderVisicomKey();
         }
         el.layersPop.hidden = !open;
         el.layerBtn.setAttribute('aria-expanded', String(open));
