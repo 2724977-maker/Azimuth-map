@@ -1,0 +1,1817 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#0f1b2a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="description" content="Azimuth — побудова секторів азимуту від базової станції на мапі">
+    <title>Azimuth Map</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%230f1b2a'/%3E%3Cpath d='M16 6l5 14h-10z' fill='%23fff'/%3E%3Ccircle cx='16' cy='22' r='3' fill='%233b82f6'/%3E%3C/svg%3E">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+    <style>
+        :root {
+            --glass: rgba(255, 255, 255, 0.74);
+            --glass-strong: rgba(255, 255, 255, 0.92);
+            --glass-border: rgba(255, 255, 255, 0.7);
+            --hairline: rgba(15, 27, 42, 0.08);
+            --field: rgba(15, 27, 42, 0.045);
+            --field-focus: rgba(37, 99, 235, 0.10);
+            --text: #0f1b2a;
+            --muted: #6b7686;
+            --primary: #0f1b2a;
+            --primary-ink: #ffffff;
+            --accent: #2563eb;
+            --danger: #e5484d;
+            --danger-soft: rgba(229, 72, 77, 0.12);
+            --shadow: 0 10px 34px rgba(15, 27, 42, 0.14), 0 1px 3px rgba(15, 27, 42, 0.06);
+            --blur: blur(28px) saturate(190%);
+            --r-lg: 22px;
+            --r-md: 14px;
+            --ease: cubic-bezier(0.32, 0.72, 0, 1);
+            --safe-t: env(safe-area-inset-top, 0px);
+            --safe-b: env(safe-area-inset-bottom, 0px);
+            --sheet-h: 0px;
+            color-scheme: light;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --glass: rgba(20, 25, 33, 0.74);
+                --glass-strong: rgba(20, 25, 33, 0.94);
+                --glass-border: rgba(255, 255, 255, 0.08);
+                --hairline: rgba(255, 255, 255, 0.08);
+                --field: rgba(255, 255, 255, 0.06);
+                --field-focus: rgba(96, 165, 250, 0.16);
+                --text: #e8edf3;
+                --muted: #8b96a5;
+                --primary: #e8edf3;
+                --primary-ink: #0f1b2a;
+                --accent: #60a5fa;
+                --danger: #ff6b6f;
+                --danger-soft: rgba(255, 107, 111, 0.14);
+                --shadow: 0 10px 34px rgba(0, 0, 0, 0.45), 0 1px 3px rgba(0, 0, 0, 0.3);
+                color-scheme: dark;
+            }
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        html, body {
+            margin: 0;
+            height: 100%;
+            overflow: hidden;
+            background: #dfe4ea;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            color: var(--text);
+            -webkit-font-smoothing: antialiased;
+            -webkit-user-select: none;
+            user-select: none;
+            overscroll-behavior: none;
+        }
+
+        button { font: inherit; color: inherit; cursor: pointer; }
+        button:disabled { cursor: not-allowed; }
+        [hidden] { display: none !important; }
+        svg { display: block; flex-shrink: 0; }
+
+        #map {
+            position: fixed;
+            inset: 0;
+            height: 100dvh;
+            z-index: 0;
+            background: #e9ecef;
+        }
+
+        .glass {
+            background: var(--glass);
+            -webkit-backdrop-filter: var(--blur);
+            backdrop-filter: var(--blur);
+            border: 1px solid var(--glass-border);
+            box-shadow: var(--shadow);
+        }
+
+        @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+            .glass { background: var(--glass-strong); }
+        }
+
+        /* ---------- Top bar ---------- */
+        .topbar {
+            position: fixed;
+            top: calc(10px + var(--safe-t));
+            left: 12px;
+            right: 12px;
+            max-width: 560px;
+            margin: 0 auto;
+            height: 54px;
+            padding: 0 7px 0 12px;
+            border-radius: 99px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            z-index: 30;
+            transition: transform 0.4s var(--ease), opacity 0.3s ease;
+        }
+
+        .brand { display: flex; align-items: center; gap: 9px; min-width: 0; }
+
+        .brand-mark {
+            width: 32px; height: 32px;
+            border-radius: 10px;
+            background: var(--primary);
+            color: var(--primary-ink);
+            display: grid; place-items: center;
+        }
+
+        .brand-name { font-weight: 700; font-size: 1.02rem; letter-spacing: -0.3px; }
+
+        .top-actions { display: flex; align-items: center; gap: 6px; }
+
+        .chip {
+            height: 40px;
+            padding: 0 14px;
+            border-radius: 99px;
+            border: 0;
+            background: var(--field);
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            font-size: 0.88rem;
+            font-weight: 600;
+            transition: background 0.2s, transform 0.15s;
+        }
+        .chip.icon-only { width: 40px; padding: 0; justify-content: center; }
+        .chip:active { transform: scale(0.95); }
+        .chip[aria-expanded="true"] { background: var(--primary); color: var(--primary-ink); }
+
+        .count {
+            min-width: 22px; height: 22px;
+            padding: 0 6px;
+            border-radius: 99px;
+            background: var(--primary);
+            color: var(--primary-ink);
+            font-size: 0.74rem;
+            font-weight: 700;
+            display: grid; place-items: center;
+            font-variant-numeric: tabular-nums;
+        }
+        .chip[aria-expanded="true"] .count { background: var(--primary-ink); color: var(--primary); }
+
+        /* ---------- Panels ---------- */
+        .panel {
+            position: fixed;
+            top: calc(74px + var(--safe-t));
+            left: 12px;
+            right: 12px;
+            max-width: 560px;
+            margin: 0 auto;
+            max-height: calc(100dvh - var(--safe-t) - var(--sheet-h) - 96px);
+            min-height: 140px;
+            border-radius: var(--r-lg);
+            padding: 14px;
+            z-index: 25;
+            display: flex;
+            flex-direction: column;
+            animation: pop 0.28s var(--ease);
+        }
+
+        @keyframes pop {
+            from { opacity: 0; transform: translateY(-8px) scale(0.98); }
+            to { opacity: 1; transform: none; }
+        }
+
+        .panel-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        .panel-head h2 { margin: 0 0 0 4px; font-size: 1.05rem; font-weight: 700; letter-spacing: -0.2px; }
+
+        .icon-btn {
+            width: 34px; height: 34px;
+            border-radius: 99px;
+            border: 0;
+            background: var(--field);
+            color: var(--muted);
+            display: grid; place-items: center;
+            transition: background 0.2s, color 0.2s, transform 0.15s;
+        }
+        .icon-btn:hover { color: var(--text); }
+        .icon-btn:active { transform: scale(0.92); }
+        .icon-btn.danger { color: var(--danger); background: var(--danger-soft); }
+
+        .panel-tools {
+            display: flex;
+            gap: 6px;
+            overflow-x: auto;
+            scrollbar-width: none;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--hairline);
+        }
+        .panel-tools::-webkit-scrollbar { display: none; }
+
+        .tool {
+            flex-shrink: 0;
+            height: 32px;
+            padding: 0 12px;
+            border-radius: 99px;
+            border: 0;
+            background: var(--field);
+            font-size: 0.8rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .tool:active { transform: scale(0.95); }
+        .tool:disabled { opacity: 0.4; }
+        .tool.danger { color: var(--danger); background: var(--danger-soft); }
+
+        .scroll {
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            margin: 0 -6px;
+            padding: 0 6px;
+            scrollbar-width: thin;
+        }
+
+        .sector-list, .results { list-style: none; margin: 0; padding: 4px 0 0; }
+
+        .sector-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 6px;
+            border-radius: var(--r-md);
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .sector-item:hover { background: var(--field); }
+        .sector-item.flash { animation: flash 1.2s ease; }
+        @keyframes flash { 0%, 40% { background: var(--field-focus); } }
+
+        .swatch {
+            width: 38px; height: 38px;
+            border-radius: 12px;
+            display: grid; place-items: center;
+            flex-shrink: 0;
+            color: #fff;
+        }
+
+        .sector-main { flex: 1; min-width: 0; }
+        .sector-title {
+            display: flex; align-items: baseline; gap: 8px;
+            font-weight: 700; font-size: 1rem;
+            font-variant-numeric: tabular-nums;
+        }
+        .sector-title small { font-weight: 500; font-size: 0.8rem; color: var(--muted); }
+        .sector-sub {
+            margin-top: 2px;
+            font-size: 0.72rem;
+            color: var(--muted);
+            font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .sector-actions { display: flex; gap: 6px; }
+
+        .empty {
+            padding: 26px 12px 18px;
+            text-align: center;
+            color: var(--muted);
+            font-size: 0.86rem;
+        }
+        .empty svg { margin: 0 auto 10px; opacity: 0.55; }
+        .empty strong { display: block; color: var(--text); font-size: 0.95rem; margin-bottom: 4px; }
+
+        /* ---------- Search ---------- */
+        .search-form { display: flex; gap: 8px; }
+
+        .search-field {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            height: 46px;
+            padding: 0 14px;
+            border-radius: 99px;
+            background: var(--field);
+            border: 1px solid transparent;
+            color: var(--muted);
+            transition: border-color 0.2s, background 0.2s;
+        }
+        .search-field:focus-within { border-color: var(--accent); background: var(--field-focus); }
+        .search-field input {
+            flex: 1; min-width: 0;
+            border: 0; outline: 0; background: transparent;
+            font: inherit; font-size: 16px; color: var(--text);
+            -webkit-user-select: text; user-select: text;
+        }
+        .search-field input::-webkit-search-cancel-button { display: none; }
+
+        .hint { font-size: 0.74rem; color: var(--muted); padding: 8px 6px 2px; line-height: 1.45; }
+        .hint code {
+            font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+            font-size: 0.72rem;
+            background: var(--field);
+            padding: 1px 5px;
+            border-radius: 5px;
+            color: var(--text);
+        }
+
+        .coord-detected {
+            margin-top: 8px;
+            padding: 9px 12px;
+            border-radius: 12px;
+            background: var(--field-focus);
+            color: var(--accent);
+            font-size: 0.8rem;
+            font-weight: 600;
+            display: flex; align-items: center; gap: 8px;
+        }
+
+        .result {
+            display: flex; gap: 12px; align-items: flex-start;
+            padding: 10px 6px;
+            border-radius: var(--r-md);
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .result:hover, .result:focus-visible { background: var(--field); outline: none; }
+        .result-icon {
+            width: 32px; height: 32px; border-radius: 10px;
+            background: var(--field); color: var(--muted);
+            display: grid; place-items: center; flex-shrink: 0;
+        }
+        .result-main { font-weight: 600; font-size: 0.9rem; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+        .result-sub { font-size: 0.74rem; color: var(--muted); margin-top: 2px; line-height: 1.35; }
+        .house {
+            font-size: 0.66rem; font-weight: 700;
+            background: var(--primary); color: var(--primary-ink);
+            padding: 1px 7px; border-radius: 6px;
+        }
+        .status-line { padding: 16px 8px; text-align: center; color: var(--muted); font-size: 0.85rem; }
+
+        .spinner {
+            width: 16px; height: 16px;
+            border: 2px solid var(--hairline);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            display: inline-block;
+            vertical-align: -3px;
+            margin-right: 8px;
+            animation: spin 0.7s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ---------- Buttons ---------- */
+        .btn {
+            height: 46px;
+            padding: 0 20px;
+            border-radius: 99px;
+            border: 0;
+            font-weight: 650;
+            font-size: 0.93rem;
+            display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+            white-space: nowrap;
+            transition: transform 0.15s, opacity 0.2s, background 0.2s;
+        }
+        .btn:active:not(:disabled) { transform: scale(0.97); }
+        .btn.primary { background: var(--primary); color: var(--primary-ink); }
+        .btn:disabled { opacity: 0.38; }
+        .btn.block { width: 100%; }
+
+        /* ---------- Floating buttons ---------- */
+        .fabs {
+            position: fixed;
+            right: 12px;
+            bottom: calc(var(--sheet-h) + 14px);
+            z-index: 20;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            transition: bottom 0.4s var(--ease);
+        }
+
+        .fab-group {
+            display: flex;
+            flex-direction: column;
+            border-radius: 16px;
+            overflow: hidden;
+            transition: opacity 0.3s ease, transform 0.4s var(--ease);
+        }
+
+        .fab {
+            width: 44px; height: 44px;
+            border: 0;
+            background: transparent;
+            display: grid; place-items: center;
+            color: var(--text);
+            transition: background 0.15s;
+        }
+        .fab + .fab { border-top: 1px solid var(--hairline); }
+        .fab:active { background: var(--field); }
+        .fab.active { color: var(--accent); }
+        .fab.busy svg { animation: spin 1s linear infinite; }
+
+        .layer-name {
+            position: absolute;
+            right: 54px;
+            padding: 6px 10px;
+            border-radius: 10px;
+            font-size: 0.76rem;
+            font-weight: 600;
+            white-space: nowrap;
+            pointer-events: none;
+            opacity: 0;
+            transform: translateX(6px);
+            transition: opacity 0.2s, transform 0.2s;
+        }
+        .layer-name.show { opacity: 1; transform: none; }
+
+        /* ---------- Bottom sheet ---------- */
+        .sheet {
+            position: fixed;
+            left: 12px;
+            right: 12px;
+            bottom: calc(12px + var(--safe-b));
+            max-width: 560px;
+            margin: 0 auto;
+            border-radius: 26px;
+            padding: 12px;
+            z-index: 30;
+            transition: transform 0.4s var(--ease), opacity 0.3s ease;
+        }
+
+        .point-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 0 2px 10px 6px;
+        }
+        .point-dot {
+            width: 10px; height: 10px; border-radius: 50%;
+            background: var(--muted);
+            box-shadow: 0 0 0 4px var(--field);
+            flex-shrink: 0;
+            transition: background 0.2s;
+        }
+        .point-row.has-point .point-dot { background: var(--accent); box-shadow: 0 0 0 4px var(--field-focus); }
+        .point-info { flex: 1; min-width: 0; display: flex; flex-direction: column; margin-left: 4px; }
+        .point-label { font-size: 0.66rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; }
+        .point-value {
+            font-size: 0.86rem; font-weight: 600;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .point-row.has-point .point-value {
+            font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+            font-size: 0.84rem;
+        }
+        .point-row:not(.has-point) .point-value { color: var(--muted); font-weight: 500; }
+
+        .fields {
+            display: grid;
+            grid-template-columns: 1.15fr 1.3fr 1fr;
+            gap: 6px;
+            margin-bottom: 8px;
+        }
+
+        .field {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            height: 56px;
+            padding: 0 12px;
+            border-radius: 16px;
+            background: var(--field);
+            border: 1px solid transparent;
+            cursor: text;
+            transition: border-color 0.2s, background 0.2s;
+            min-width: 0;
+        }
+        .field:focus-within { border-color: var(--accent); background: var(--field-focus); }
+        .field span {
+            font-size: 0.64rem; font-weight: 700;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+        }
+        .field input {
+            width: 100%;
+            border: 0; outline: 0;
+            background: transparent;
+            padding: 0;
+            font: inherit;
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--text);
+            font-variant-numeric: tabular-nums;
+            -webkit-user-select: text; user-select: text;
+            -moz-appearance: textfield;
+            appearance: textfield;
+        }
+        .field input::-webkit-outer-spin-button,
+        .field input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        .field.invalid { border-color: var(--danger); background: var(--danger-soft); }
+
+        /* ---------- HUD hidden ---------- */
+        .hud-hidden .topbar { transform: translateY(calc(-100% - 30px)); opacity: 0; pointer-events: none; }
+        .hud-hidden .sheet { transform: translateY(calc(100% + 30px)); opacity: 0; pointer-events: none; }
+        .hud-hidden .panel { display: none; }
+        .hud-hidden .fab-group.hideable { opacity: 0; transform: translateX(70px); pointer-events: none; }
+
+        /* ---------- Toast ---------- */
+        .toast {
+            position: fixed;
+            bottom: calc(var(--sheet-h) + 14px);
+            left: 50%;
+            z-index: 2000;
+            transform: translate(-50%, 10px);
+            width: max-content;
+            max-width: calc(100% - 32px);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 9px 10px 9px 18px;
+            min-height: 40px;
+            border-radius: 99px;
+            background: rgba(17, 22, 30, 0.9);
+            color: #fff;
+            font-size: 0.86rem;
+            font-weight: 500;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease, transform 0.3s var(--ease);
+        }
+        .toast:not(.with-action) { padding-right: 18px; }
+        .toast.show { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
+        .toast button {
+            border: 0;
+            background: rgba(255, 255, 255, 0.16);
+            color: #fff;
+            border-radius: 99px;
+            padding: 5px 12px;
+            font-weight: 650;
+            font-size: 0.8rem;
+        }
+
+        /* ---------- Map markers ---------- */
+        .pick-icon { background: none; border: 0; }
+        .pick {
+            position: relative;
+            width: 64px; height: 64px;
+        }
+        .pick-ring {
+            position: absolute; inset: 14px;
+            border-radius: 50%;
+            background: rgba(37, 99, 235, 0.16);
+            border: 2px solid rgba(37, 99, 235, 0.55);
+            animation: pulse 1.8s ease-out infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(0.6); opacity: 1; }
+            100% { transform: scale(1.5); opacity: 0; }
+        }
+        .pick-dot {
+            position: absolute; left: 50%; top: 50%;
+            width: 16px; height: 16px;
+            margin: -8px 0 0 -8px;
+            border-radius: 50%;
+            background: #2563eb;
+            border: 3px solid #fff;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+        }
+        .pick-arrow {
+            position: absolute; inset: 0;
+            transition: transform 0.25s var(--ease);
+        }
+        .pick-arrow::before {
+            content: "";
+            position: absolute;
+            left: 50%; top: 0;
+            margin-left: -7px;
+            border-left: 7px solid transparent;
+            border-right: 7px solid transparent;
+            border-bottom: 14px solid #2563eb;
+            filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.35));
+        }
+        .pick-bubble {
+            position: absolute;
+            left: 50%; bottom: calc(100% - 4px);
+            transform: translateX(-50%);
+            background: #0f1b2a;
+            color: #fff;
+            font-weight: 700;
+            font-size: 0.78rem;
+            padding: 3px 9px;
+            border-radius: 99px;
+            white-space: nowrap;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .sector-label-icon { background: none; border: 0; }
+        .sector-label {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            white-space: nowrap;
+            font-size: 0.74rem;
+            font-weight: 700;
+            color: #fff;
+            padding: 3px 9px;
+            border-radius: 99px;
+            border: 2px solid #fff;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            font-variant-numeric: tabular-nums;
+            pointer-events: none;
+        }
+
+        /* ---------- Leaflet tweaks ---------- */
+        .leaflet-container { font-family: inherit; }
+        .leaflet-bottom { bottom: var(--sheet-h); transition: bottom 0.4s var(--ease); }
+        .leaflet-control-attribution {
+            background: var(--glass) !important;
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            color: var(--muted) !important;
+            border-radius: 8px 0 0 0;
+            font-size: 10px !important;
+        }
+        .leaflet-control-attribution a { color: var(--muted) !important; }
+        .leaflet-control-scale { margin-left: 14px !important; margin-bottom: 8px !important; }
+        .leaflet-control-scale-line {
+            background: var(--glass) !important;
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            border-color: var(--text) !important;
+            color: var(--text);
+            font-weight: 600;
+            border-radius: 0 0 4px 4px;
+        }
+
+        @media (min-width: 720px) {
+            .topbar, .sheet, .panel { left: 16px; right: auto; width: 420px; margin: 0; }
+            .panel { max-height: calc(100dvh - 110px); }
+            .sheet { bottom: calc(16px + var(--safe-b)); }
+            .topbar { top: 16px; }
+            .panel { top: 80px; }
+            .leaflet-bottom.leaflet-left { bottom: 0; left: 450px; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { animation: none !important; transition: none !important; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="map" role="application" aria-label="Мапа"></div>
+
+<header class="topbar glass">
+    <div class="brand">
+        <span class="brand-mark" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z" fill="currentColor"/></svg>
+        </span>
+        <span class="brand-name">Azimuth</span>
+    </div>
+    <nav class="top-actions">
+        <button class="chip" id="listBtn" aria-expanded="false" aria-controls="listPanel">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 12L4.5 6.5A9 9 0 0 1 19.5 6.5z"/><path d="M12 12v9"/></svg>
+            <span>Сектори</span>
+            <span class="count" id="countBadge">0</span>
+        </button>
+        <button class="chip icon-only" id="searchBtn" aria-expanded="false" aria-controls="searchPanel" aria-label="Пошук">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+        </button>
+    </nav>
+</header>
+
+<section class="panel glass" id="listPanel" hidden aria-label="Список секторів">
+    <div class="panel-head">
+        <h2>Сектори</h2>
+        <button class="icon-btn" data-close aria-label="Закрити">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+    </div>
+    <div class="panel-tools">
+        <button class="tool" id="fitBtn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+            Показати всі
+        </button>
+        <button class="tool" id="exportBtn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>
+            Експорт
+        </button>
+        <button class="tool" id="importBtn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4M7 9l5-5 5 5M5 20h14"/></svg>
+            Імпорт
+        </button>
+        <button class="tool danger" id="clearBtn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>
+            Очистити
+        </button>
+    </div>
+    <div class="scroll">
+        <ul class="sector-list" id="sectorList"></ul>
+        <div class="empty" id="emptyState">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2z"/><path d="M9 4v14M15 6v14"/></svg>
+            <strong>Мапа порожня</strong>
+            Торкніться мапи, задайте азимут і натисніть «Встановити»
+        </div>
+    </div>
+    <input type="file" id="importInput" accept=".json,.geojson,application/json,application/geo+json" hidden>
+</section>
+
+<section class="panel glass" id="searchPanel" hidden aria-label="Пошук">
+    <div class="panel-head">
+        <h2>Пошук</h2>
+        <button class="icon-btn" data-close aria-label="Закрити">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+    </div>
+    <form class="search-form" id="searchForm" autocomplete="off">
+        <label class="search-field">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+            <input type="search" id="searchInput" enterkeyhint="search" placeholder="Адреса або координати" aria-label="Адреса або координати">
+        </label>
+        <button class="btn primary" type="submit" id="searchSubmit">Знайти</button>
+    </form>
+    <div class="hint" id="searchHint">
+        Наприклад: <code>Хрещатик 15, Київ</code> · <code>50.4501, 30.5234</code> · <code>48°44'14"N 37°35'13"E</code>
+    </div>
+    <div class="coord-detected" id="coordDetected" hidden></div>
+    <div class="scroll">
+        <ul class="results" id="searchResults"></ul>
+    </div>
+</section>
+
+<div class="fabs" id="fabs">
+    <div class="fab-group glass hideable">
+        <button class="fab" id="zoomInBtn" aria-label="Наблизити">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        </button>
+        <button class="fab" id="zoomOutBtn" aria-label="Віддалити">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12h14"/></svg>
+        </button>
+    </div>
+    <div class="fab-group glass hideable" style="position: relative; overflow: visible;">
+        <span class="layer-name glass" id="layerName"></span>
+        <button class="fab" id="layerBtn" aria-label="Змінити шар мапи">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></svg>
+        </button>
+        <button class="fab" id="locateBtn" aria-label="Моє місцезнаходження">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+        </button>
+    </div>
+    <div class="fab-group glass">
+        <button class="fab" id="hudBtn" aria-label="Сховати інтерфейс" aria-pressed="false">
+            <svg id="hudIcon" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+    </div>
+</div>
+
+<footer class="sheet glass" id="sheet">
+    <div class="point-row" id="pointRow">
+        <span class="point-dot" aria-hidden="true"></span>
+        <div class="point-info">
+            <span class="point-label">Базова станція</span>
+            <span class="point-value" id="pointText">Торкніться мапи, щоб обрати точку</span>
+        </div>
+        <button class="icon-btn" id="copyPointBtn" aria-label="Копіювати координати" hidden>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="3"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>
+        </button>
+        <button class="icon-btn" id="clearPointBtn" aria-label="Скасувати вибір точки" hidden>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+    </div>
+    <form id="sectorForm" autocomplete="off">
+        <div class="fields">
+            <label class="field" id="azField">
+                <span>Азимут, °</span>
+                <input type="number" id="azInput" inputmode="decimal" min="0" max="360" step="any" enterkeyhint="done">
+            </label>
+            <label class="field" id="distField">
+                <span>Дальність, м</span>
+                <input type="number" id="distInput" inputmode="numeric" min="10" max="50000" step="any" enterkeyhint="done">
+            </label>
+            <label class="field" id="widthField">
+                <span>Ширина, °</span>
+                <input type="number" id="widthInput" inputmode="numeric" min="0" max="360" step="any" enterkeyhint="done">
+            </label>
+        </div>
+        <button class="btn primary block" type="submit" id="addBtn" disabled>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            Встановити сектор
+        </button>
+    </form>
+</footer>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(() => {
+    'use strict';
+
+    /* ================= Constants ================= */
+    const STORAGE_KEY = 'azimuth-map:v2';
+    const EARTH_R = 6378137;
+    const DEFAULT_VIEW = { center: [48.73723, 37.58702], zoom: 16 };
+    const COLORS = ['#2563eb', '#e5484d', '#16a34a', '#f59e0b', '#8b5cf6', '#0891b2', '#db2777', '#0d9488'];
+    const LIMITS = {
+        dist: { min: 10, max: 50000 },
+        width: { min: 0, max: 360 }
+    };
+
+    const $ = (id) => document.getElementById(id);
+    const el = {
+        countBadge: $('countBadge'),
+        listBtn: $('listBtn'),
+        searchBtn: $('searchBtn'),
+        listPanel: $('listPanel'),
+        searchPanel: $('searchPanel'),
+        sectorList: $('sectorList'),
+        emptyState: $('emptyState'),
+        fitBtn: $('fitBtn'),
+        exportBtn: $('exportBtn'),
+        importBtn: $('importBtn'),
+        importInput: $('importInput'),
+        clearBtn: $('clearBtn'),
+        searchForm: $('searchForm'),
+        searchInput: $('searchInput'),
+        searchHint: $('searchHint'),
+        coordDetected: $('coordDetected'),
+        searchResults: $('searchResults'),
+        zoomInBtn: $('zoomInBtn'),
+        zoomOutBtn: $('zoomOutBtn'),
+        layerBtn: $('layerBtn'),
+        layerName: $('layerName'),
+        locateBtn: $('locateBtn'),
+        hudBtn: $('hudBtn'),
+        hudIcon: $('hudIcon'),
+        sheet: $('sheet'),
+        pointRow: $('pointRow'),
+        pointText: $('pointText'),
+        copyPointBtn: $('copyPointBtn'),
+        clearPointBtn: $('clearPointBtn'),
+        sectorForm: $('sectorForm'),
+        azInput: $('azInput'),
+        distInput: $('distInput'),
+        widthInput: $('widthInput'),
+        azField: $('azField'),
+        distField: $('distField'),
+        widthField: $('widthField'),
+        addBtn: $('addBtn'),
+        toast: $('toast')
+    };
+
+    /* ================= Storage ================= */
+    function loadState() {
+        try {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            return raw ? JSON.parse(raw) : {};
+        } catch {
+            return {};
+        }
+    }
+
+    function saveState() {
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify({
+                sectors: state.sectors,
+                colorSeq: state.colorSeq,
+                layer: state.layer,
+                inputs: { az: el.azInput.value, dist: el.distInput.value, width: el.widthInput.value },
+                view: { center: [map.getCenter().lat, map.getCenter().lng], zoom: map.getZoom() }
+            }));
+        } catch {
+            /* storage may be unavailable (private mode) — app still works in-memory */
+        }
+    }
+
+    /* ================= Math / formatting ================= */
+    const toRad = (d) => d * Math.PI / 180;
+    const toDeg = (r) => r * 180 / Math.PI;
+    const normAz = (a) => ((a % 360) + 360) % 360;
+    const round = (v, p = 1) => Math.round(v * 10 ** p) / 10 ** p;
+    const isNum = (v) => typeof v === 'number' && Number.isFinite(v);
+
+    function destination(lat, lng, azimuth, distance) {
+        const d = distance / EARTH_R;
+        const φ1 = toRad(lat);
+        const λ1 = toRad(lng);
+        const θ = toRad(azimuth);
+        const φ2 = Math.asin(Math.sin(φ1) * Math.cos(d) + Math.cos(φ1) * Math.sin(d) * Math.cos(θ));
+        const λ2 = λ1 + Math.atan2(Math.sin(θ) * Math.sin(d) * Math.cos(φ1), Math.cos(d) - Math.sin(φ1) * Math.sin(φ2));
+        return [toDeg(φ2), ((toDeg(λ2) + 540) % 360) - 180];
+    }
+
+    function sectorShape(s) {
+        const [lat, lng] = s.origin;
+        const end = destination(lat, lng, s.az, s.dist);
+        if (s.width <= 0) return { polygon: null, end };
+        const full = s.width >= 360;
+        const span = full ? 360 : s.width;
+        const start = full ? 0 : s.az - span / 2;
+        const steps = Math.max(12, Math.ceil(span / 2));
+        const arc = [];
+        for (let i = 0; i <= steps; i++) {
+            arc.push(destination(lat, lng, start + span * i / steps, s.dist));
+        }
+        return { polygon: full ? arc : [s.origin, ...arc], end };
+    }
+
+    const fmtCoord = (v) => v.toFixed(6);
+    const fmtLatLng = (lat, lng) => `${fmtCoord(lat)}, ${fmtCoord(lng)}`;
+    const fmtAz = (a) => `${String(round(a, 1)).replace('.', ',')}°`;
+
+    function fmtDist(m) {
+        if (m >= 1000) return `${String(round(m / 1000, 2)).replace('.', ',')} км`;
+        return `${Math.round(m)} м`;
+    }
+
+    /* ================= Coordinate parser ================= */
+    const toNum = (s) => parseFloat(String(s).replace(',', '.'));
+
+    function validLatLng(lat, lng) {
+        if (!isNum(lat) || !isNum(lng)) return null;
+        if (Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
+        return { lat, lng };
+    }
+
+    /**
+     * Accepts decimal pairs ("50.45, 30.52", "50,45 30,52"), DMS with symbols
+     * ("48°44'14.0\"N 37°35'13.3\"E"), hemisphere prefixes/suffixes ("N48 44 14 E37 35 13"),
+     * degrees + decimal minutes ("48°44.233' 37°35.221'") and bare DMS ("48 44 14 37 35 13").
+     */
+    function parseCoordinates(input) {
+        let s = String(input || '').trim().toUpperCase()
+            .replace(/[″”“]/g, '"')
+            .replace(/[′’‘`´]/g, "'")
+            .replace(/''/g, '"')
+            .replace(/[º˚]/g, '°');
+        if (!s) return null;
+
+        const pair = s.match(/^([-+]?\d{1,3}(?:[.,]\d+)?)\s*(?:[,;]\s*|\s+)([-+]?\d{1,3}(?:[.,]\d+)?)$/);
+        if (pair) return validLatLng(toNum(pair[1]), toNum(pair[2]));
+
+        const tokenRe = /([NSEW])|([-+]?\d+(?:[.,]\d+)?)\s*([°'"])?/g;
+        if (s.replace(tokenRe, '').replace(/[\s,;:]/g, '') !== '') return null;
+
+        const coords = [];
+        let cur = { parts: [], hemi: null };
+        const close = () => {
+            if (cur.parts.length) coords.push(cur);
+            cur = { parts: [], hemi: null };
+        };
+
+        for (const t of s.matchAll(tokenRe)) {
+            if (t[1]) {
+                if (cur.parts.length && !cur.hemi) {
+                    cur.hemi = t[1];
+                    close();
+                } else {
+                    if (cur.parts.length) close();
+                    cur.hemi = t[1];
+                }
+                continue;
+            }
+            const value = toNum(t[2]);
+            const unit = t[3];
+            let slot = unit === '°' ? 0 : unit === "'" ? 1 : unit === '"' ? 2 : cur.parts.length;
+            if (cur.parts.length >= 3 || (cur.parts.length && slot < cur.parts.length)) {
+                close();
+                if (!unit) slot = 0;
+            }
+            cur.parts[slot] = value;
+        }
+        close();
+
+        if (coords.length !== 2) return null;
+
+        const toDecimal = (c) => {
+            const [d = 0, m = 0, sec = 0] = c.parts;
+            if (m < 0 || m >= 60 || sec < 0 || sec >= 60) return NaN;
+            let v = Math.abs(d) + m / 60 + sec / 3600;
+            if (d < 0 || c.hemi === 'S' || c.hemi === 'W') v = -v;
+            return v;
+        };
+
+        let [a, b] = coords;
+        if ((a.hemi === 'E' || a.hemi === 'W') || (b.hemi === 'N' || b.hemi === 'S')) [a, b] = [b, a];
+        return validLatLng(toDecimal(a), toDecimal(b));
+    }
+
+    /* ================= State ================= */
+    const saved = loadState();
+
+    const validSector = (s) => s && typeof s.id === 'string' && Array.isArray(s.origin)
+        && isNum(s.origin[0]) && isNum(s.origin[1]) && isNum(s.az) && isNum(s.dist) && isNum(s.width);
+
+    const state = {
+        sectors: Array.isArray(saved.sectors) ? saved.sectors.filter(validSector) : [],
+        colorSeq: isNum(saved.colorSeq) ? saved.colorSeq : 0,
+        layer: saved.layer || 'osm',
+        selected: null,
+        hud: true,
+        searchAbort: null
+    };
+
+    el.azInput.value = saved.inputs?.az ?? 60;
+    el.distInput.value = saved.inputs?.dist ?? 500;
+    el.widthInput.value = saved.inputs?.width ?? 60;
+
+    /* ================= Map ================= */
+    const startView = saved.view && Array.isArray(saved.view.center) && isNum(saved.view.zoom)
+        ? saved.view : DEFAULT_VIEW;
+
+    const map = L.map('map', {
+        zoomControl: false,
+        zoomSnap: 0.25,
+        zoomDelta: 0.5,
+        wheelPxPerZoomLevel: 90,
+        worldCopyJump: true
+    }).setView(startView.center, startView.zoom);
+
+    const LAYERS = {
+        osm: {
+            name: 'OpenStreetMap',
+            layer: L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>',
+                minZoom: 2,
+                maxZoom: 21,
+                maxNativeZoom: 19
+            })
+        },
+        visicom: {
+            name: 'Візіком',
+            layer: L.tileLayer('https://tms{s}.visicom.ua/2.0.0/planet3/base/{z}/{x}/{y}.png?lang=uk', {
+                attribution: 'Дані карт © АТ «<a href="https://api.visicom.ua/" target="_blank" rel="noopener">Візіком</a>»',
+                subdomains: '123',
+                tms: true,
+                minZoom: 2,
+                maxZoom: 21,
+                maxNativeZoom: 19
+            })
+        },
+        satellite: {
+            name: 'Супутник',
+            layer: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                attribution: 'Знімки © Esri, Maxar, Earthstar Geographics',
+                minZoom: 2,
+                maxZoom: 21,
+                maxNativeZoom: 19
+            })
+        }
+    };
+    const LAYER_ORDER = Object.keys(LAYERS);
+    if (!LAYERS[state.layer]) state.layer = 'osm';
+    LAYERS[state.layer].layer.addTo(map);
+
+    L.control.scale({ imperial: false, position: 'bottomleft', maxWidth: 120 }).addTo(map);
+    map.attributionControl.setPrefix('<a href="https://leafletjs.com" target="_blank" rel="noopener">Leaflet</a>');
+
+    const sectorsLayer = L.layerGroup().addTo(map);
+    const previewLayer = L.layerGroup().addTo(map);
+    let pickMarker = null;
+    let locateCircle = null;
+
+    /* ================= UI helpers ================= */
+    let toastTimer = null;
+    function toast(text, action) {
+        clearTimeout(toastTimer);
+        el.toast.textContent = text;
+        el.toast.classList.toggle('with-action', !!action);
+        if (action) {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.textContent = action.label;
+            btn.addEventListener('click', () => {
+                hideToast();
+                action.run();
+            }, { once: true });
+            el.toast.appendChild(btn);
+        }
+        el.toast.classList.add('show');
+        toastTimer = setTimeout(hideToast, action ? 5000 : 2600);
+    }
+    function hideToast() {
+        el.toast.classList.remove('show');
+    }
+
+    async function copyText(text) {
+        try {
+            await navigator.clipboard.writeText(text);
+        } catch {
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.select();
+            try { document.execCommand('copy'); } catch { /* ignore */ }
+            ta.remove();
+        }
+        toast(`Скопійовано: ${text}`);
+    }
+
+    function svgIcon(path, size = 15, stroke = 2.4) {
+        const ns = 'http://www.w3.org/2000/svg';
+        const svg = document.createElementNS(ns, 'svg');
+        svg.setAttribute('width', size);
+        svg.setAttribute('height', size);
+        svg.setAttribute('viewBox', '0 0 24 24');
+        svg.setAttribute('fill', 'none');
+        svg.setAttribute('stroke', 'currentColor');
+        svg.setAttribute('stroke-width', stroke);
+        svg.setAttribute('stroke-linecap', 'round');
+        svg.setAttribute('stroke-linejoin', 'round');
+        const p = document.createElementNS(ns, 'path');
+        p.setAttribute('d', path);
+        svg.appendChild(p);
+        return svg;
+    }
+    const ICONS = {
+        copy: 'M8 8h12v12H8zM16 8V4H4v12h4',
+        trash: 'M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13',
+        pin: 'M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21zM12 12a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z',
+        arrow: 'M12 20V4M6 10l6-6 6 6'
+    };
+
+    function updateSheetHeight() {
+        const h = state.hud ? Math.max(0, window.innerHeight - el.sheet.getBoundingClientRect().top) : 0;
+        document.documentElement.style.setProperty('--sheet-h', `${Math.round(h)}px`);
+    }
+    if ('ResizeObserver' in window) new ResizeObserver(updateSheetHeight).observe(el.sheet);
+    window.addEventListener('resize', updateSheetHeight);
+
+    /* ================= Panels ================= */
+    const panels = {
+        list: { panel: el.listPanel, btn: el.listBtn },
+        search: { panel: el.searchPanel, btn: el.searchBtn }
+    };
+
+    function openPanel(name) {
+        for (const [key, p] of Object.entries(panels)) {
+            const on = key === name;
+            p.panel.hidden = !on;
+            p.btn.setAttribute('aria-expanded', String(on));
+        }
+        if (name === 'search') setTimeout(() => el.searchInput.focus(), 60);
+    }
+
+    function closePanels() {
+        openPanel(null);
+        if (state.searchAbort) state.searchAbort.abort();
+    }
+
+    function togglePanel(name) {
+        if (panels[name].panel.hidden) openPanel(name);
+        else closePanels();
+    }
+
+    el.listBtn.addEventListener('click', () => togglePanel('list'));
+    el.searchBtn.addEventListener('click', () => togglePanel('search'));
+    document.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', closePanels));
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            if (!el.listPanel.hidden || !el.searchPanel.hidden) closePanels();
+            else if (state.selected) clearSelection();
+        }
+    });
+
+    /* ================= Inputs ================= */
+    function readInputs() {
+        const azRaw = toNum(el.azInput.value);
+        const distRaw = toNum(el.distInput.value);
+        const widthRaw = el.widthInput.value.trim() === '' ? 0 : toNum(el.widthInput.value);
+
+        const azOk = isNum(azRaw);
+        const distOk = isNum(distRaw) && distRaw >= LIMITS.dist.min && distRaw <= LIMITS.dist.max;
+        const widthOk = isNum(widthRaw) && widthRaw >= LIMITS.width.min && widthRaw <= LIMITS.width.max;
+
+        el.azField.classList.toggle('invalid', el.azInput.value !== '' && !azOk);
+        el.distField.classList.toggle('invalid', el.distInput.value !== '' && !distOk);
+        el.widthField.classList.toggle('invalid', !widthOk);
+
+        return {
+            valid: azOk && distOk && widthOk,
+            az: azOk ? normAz(azRaw) : null,
+            dist: distOk ? distRaw : null,
+            width: widthOk ? widthRaw : null,
+            errors: { az: !azOk, dist: !distOk, width: !widthOk }
+        };
+    }
+
+    function refreshForm() {
+        const v = readInputs();
+        el.addBtn.disabled = !state.selected || !v.valid;
+        updatePickMarker(v);
+        renderPreview(v);
+        return v;
+    }
+
+    let saveTimer = null;
+    const saveSoon = () => {
+        clearTimeout(saveTimer);
+        saveTimer = setTimeout(saveState, 300);
+    };
+
+    [el.azInput, el.distInput, el.widthInput].forEach((input) => {
+        input.addEventListener('input', () => {
+            refreshForm();
+            saveSoon();
+        });
+        input.addEventListener('focus', () => input.select());
+    });
+
+    el.azInput.addEventListener('change', () => {
+        const v = toNum(el.azInput.value);
+        if (isNum(v) && (v < 0 || v >= 360)) {
+            el.azInput.value = round(normAz(v), 2);
+            refreshForm();
+        }
+    });
+
+    /* ================= Point selection ================= */
+    function pickIconHtml(az) {
+        return `<div class="pick">
+            <div class="pick-ring"></div>
+            <div class="pick-arrow" style="transform: rotate(${az ?? 0}deg)"${az == null ? ' hidden' : ''}></div>
+            <div class="pick-dot"></div>
+            <div class="pick-bubble">${az == null ? '—' : fmtAz(az)}</div>
+        </div>`;
+    }
+
+    function updatePickMarker(v) {
+        if (!pickMarker) return;
+        const root = pickMarker.getElement();
+        if (!root) return;
+        const arrow = root.querySelector('.pick-arrow');
+        const bubble = root.querySelector('.pick-bubble');
+        if (v.az == null) {
+            arrow.hidden = true;
+            bubble.textContent = '—';
+        } else {
+            arrow.hidden = false;
+            arrow.style.transform = `rotate(${v.az}deg)`;
+            bubble.textContent = fmtAz(v.az);
+        }
+    }
+
+    function selectPoint(latlng, { pan = false } = {}) {
+        const lat = latlng.lat;
+        const lng = L.Util.wrapNum(latlng.lng, [-180, 180], true);
+        state.selected = { lat, lng };
+
+        el.pointRow.classList.add('has-point');
+        el.pointText.textContent = fmtLatLng(lat, lng);
+        el.copyPointBtn.hidden = false;
+        el.clearPointBtn.hidden = false;
+
+        const v = readInputs();
+        if (pickMarker) {
+            pickMarker.setLatLng([lat, lng]);
+        } else {
+            pickMarker = L.marker([lat, lng], {
+                draggable: true,
+                autoPan: true,
+                keyboard: false,
+                zIndexOffset: 1000,
+                icon: L.divIcon({ className: 'pick-icon', html: pickIconHtml(v.az), iconSize: [64, 64], iconAnchor: [32, 32] })
+            }).addTo(map);
+            pickMarker.on('drag', (e) => {
+                const p = e.target.getLatLng();
+                state.selected = { lat: p.lat, lng: L.Util.wrapNum(p.lng, [-180, 180], true) };
+                el.pointText.textContent = fmtLatLng(state.selected.lat, state.selected.lng);
+                renderPreview(readInputs());
+            });
+        }
+        if (pan) map.panTo([lat, lng]);
+        refreshForm();
+    }
+
+    function clearSelection() {
+        state.selected = null;
+        if (pickMarker) {
+            map.removeLayer(pickMarker);
+            pickMarker = null;
+        }
+        previewLayer.clearLayers();
+        el.pointRow.classList.remove('has-point');
+        el.pointText.textContent = 'Торкніться мапи, щоб обрати точку';
+        el.copyPointBtn.hidden = true;
+        el.clearPointBtn.hidden = true;
+        el.addBtn.disabled = true;
+    }
+
+    map.on('click', (e) => {
+        if (!el.listPanel.hidden || !el.searchPanel.hidden) {
+            closePanels();
+            return;
+        }
+        selectPoint(e.latlng);
+    });
+
+    el.clearPointBtn.addEventListener('click', clearSelection);
+    el.copyPointBtn.addEventListener('click', () => {
+        if (state.selected) copyText(fmtLatLng(state.selected.lat, state.selected.lng));
+    });
+
+    /* ================= Preview ================= */
+    function renderPreview(v) {
+        previewLayer.clearLayers();
+        if (!state.selected || !v.valid) return;
+        const s = { origin: [state.selected.lat, state.selected.lng], az: v.az, dist: v.dist, width: v.width };
+        const { polygon, end } = sectorShape(s);
+        const style = { color: '#2563eb', weight: 2, dashArray: '6 6', interactive: false };
+        if (polygon) {
+            L.polygon(polygon, { ...style, fillColor: '#2563eb', fillOpacity: 0.1 }).addTo(previewLayer);
+        }
+        L.polyline([s.origin, end], { ...style, dashArray: null, opacity: 0.85 }).addTo(previewLayer);
+    }
+
+    /* ================= Sectors ================= */
+    function addSector() {
+        const v = refreshForm();
+        if (!state.selected) {
+            toast('Спочатку оберіть точку на мапі');
+            return;
+        }
+        if (!v.valid) {
+            if (v.errors.az) toast('Невірний азимут');
+            else if (v.errors.dist) toast(`Дальність: ${LIMITS.dist.min}–${LIMITS.dist.max} м`);
+            else toast('Ширина сектора: 0–360°');
+            return;
+        }
+        const sector = {
+            id: `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`,
+            origin: [round(state.selected.lat, 7), round(state.selected.lng, 7)],
+            az: round(v.az, 2),
+            dist: round(v.dist, 1),
+            width: round(v.width, 2),
+            color: COLORS[state.colorSeq % COLORS.length],
+            created: Date.now()
+        };
+        state.colorSeq++;
+        state.sectors.push(sector);
+        renderSectors();
+        saveState();
+        toast(`Сектор ${fmtAz(sector.az)} · ${fmtDist(sector.dist)} додано`);
+    }
+
+    el.sectorForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        document.activeElement?.blur?.();
+        addSector();
+    });
+
+    function removeSector(id) {
+        const idx = state.sectors.findIndex((s) => s.id === id);
+        if (idx < 0) return;
+        const [removed] = state.sectors.splice(idx, 1);
+        renderSectors();
+        saveState();
+        toast(`Сектор ${fmtAz(removed.az)} видалено`, {
+            label: 'Повернути',
+            run: () => {
+                state.sectors.splice(Math.min(idx, state.sectors.length), 0, removed);
+                renderSectors();
+                saveState();
+            }
+        });
+    }
+
+    function clearAll() {
+        if (!state.sectors.length) return;
+        if (!confirm(`Видалити всі сектори (${state.sectors.length})?`)) return;
+        const backup = state.sectors.slice();
+        state.sectors = [];
+        renderSectors();
+        saveState();
+        toast('Усі сектори видалено', {
+            label: 'Повернути',
+            run: () => {
+                state.sectors = backup.concat(state.sectors);
+                renderSectors();
+                saveState();
+            }
+        });
+    }
+
+    function sectorBounds(list) {
+        const bounds = L.latLngBounds([]);
+        list.forEach((s) => {
+            const { polygon, end } = sectorShape(s);
+            bounds.extend(s.origin);
+            bounds.extend(end);
+            if (polygon) polygon.forEach((p) => bounds.extend(p));
+        });
+        return bounds;
+    }
+
+    function fitPadding() {
+        const top = 90;
+        const bottom = (state.hud ? parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sheet-h')) || 0 : 0) + 30;
+        const wide = window.innerWidth >= 720 && state.hud;
+        return { paddingTopLeft: [wide ? 460 : 30, top], paddingBottomRight: [70, bottom] };
+    }
+
+    function focusSector(id) {
+        const s = state.sectors.find((x) => x.id === id);
+        if (!s) return;
+        closePanels();
+        map.flyToBounds(sectorBounds([s]), { ...fitPadding(), maxZoom: 18, duration: 0.6 });
+    }
+
+    function fitAll() {
+        if (!state.sectors.length) {
+            toast('Немає секторів');
+            return;
+        }
+        closePanels();
+        map.flyToBounds(sectorBounds(state.sectors), { ...fitPadding(), maxZoom: 18, duration: 0.6 });
+    }
+
+    function renderSectors() {
+        sectorsLayer.clearLayers();
+
+        state.sectors.forEach((s) => {
+            const { polygon, end } = sectorShape(s);
+            if (polygon) {
+                L.polygon(polygon, {
+                    color: s.color, weight: 2, opacity: 0.9,
+                    fillColor: s.color, fillOpacity: 0.16,
+                    interactive: false
+                }).addTo(sectorsLayer);
+            }
+            L.polyline([s.origin, end], {
+                color: s.color, weight: 2.5, dashArray: '2 6', lineCap: 'round', interactive: false
+            }).addTo(sectorsLayer);
+
+            L.marker(end, {
+                interactive: false,
+                keyboard: false,
+                icon: L.divIcon({
+                    className: 'sector-label-icon',
+                    iconSize: [0, 0],
+                    html: `<div class="sector-label" style="background:${s.color}">${fmtAz(s.az)} · ${fmtDist(s.dist)}</div>`
+                })
+            }).addTo(sectorsLayer);
+
+            const origin = L.circleMarker(s.origin, {
+                radius: 6, color: '#fff', weight: 2.5,
+                fillColor: s.color, fillOpacity: 1,
+                bubblingMouseEvents: false
+            }).addTo(sectorsLayer);
+            origin.bindTooltip('Обрати цю БС', { direction: 'top', offset: [0, -6] });
+            origin.on('click', () => {
+                selectPoint(L.latLng(s.origin[0], s.origin[1]));
+                toast('Точку БС обрано — додайте ще один сектор');
+            });
+        });
+
+        renderList();
+    }
+
+    function renderList() {
+        const n = state.sectors.length;
+        el.countBadge.textContent = n;
+        el.emptyState.hidden = n > 0;
+        el.fitBtn.disabled = el.exportBtn.disabled = el.clearBtn.disabled = n === 0;
+        el.sectorList.replaceChildren();
+
+        state.sectors.slice().reverse().forEach((s) => {
+            const li = document.createElement('li');
+            li.className = 'sector-item';
+            li.dataset.id = s.id;
+            li.tabIndex = 0;
+
+            const swatch = document.createElement('div');
+            swatch.className = 'swatch';
+            swatch.style.background = s.color;
+            const arrow = svgIcon(ICONS.arrow, 18, 2.6);
+            arrow.style.transform = `rotate(${s.az}deg)`;
+            swatch.appendChild(arrow);
+
+            const main = document.createElement('div');
+            main.className = 'sector-main';
+            const title = document.createElement('div');
+            title.className = 'sector-title';
+            title.textContent = fmtAz(s.az);
+            const small = document.createElement('small');
+            small.textContent = `${fmtDist(s.dist)} · ${s.width > 0 ? `±${String(round(s.width / 2, 1)).replace('.', ',')}°` : 'промінь'}`;
+            title.appendChild(small);
+            const sub = document.createElement('div');
+            sub.className = 'sector-sub';
+            sub.textContent = fmtLatLng(s.origin[0], s.origin[1]);
+            main.append(title, sub);
+
+            const actions = document.createElement('div');
+            actions.className = 'sector-actions';
+
+            const copyBtn = document.createElement('button');
+            copyBtn.className = 'icon-btn';
+            copyBtn.type = 'button';
+            copyBtn.title = 'Копіювати координати кінцевої точки';
+            copyBtn.setAttribute('aria-label', copyBtn.title);
+            copyBtn.appendChild(svgIcon(ICONS.copy));
+            copyBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const [lat, lng] = sectorShape(s).end;
+                copyText(fmtLatLng(lat, lng));
+            });
+
+            const delBtn = document.createElement('button');
+            delBtn.className = 'icon-btn danger';
+            delBtn.type = 'button';
+            delBtn.title = 'Видалити сектор';
+            delBtn.setAttribute('aria-label', delBtn.title);
+            delBtn.appendChild(svgIcon(ICONS.trash));
+            delBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                removeSector(s.id);
+            });
+
+            actions.append(copyBtn, delBtn);
+            li.append(swatch, main, actions);
+            li.addEventListener('click', () => focusSector(s.id));
+            li.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') focusSector(s.id);
+                if (e.key === 'Delete' || e.key === 'Backspace') removeSector(s.id);
+            });
+            el.sectorList.appendChild(li);
+        });
+    }
+
+    el.fitBtn.addEventListener('click', fitAll);
+    el.clearBtn.addEventListener('click', clearAll);
+
+    /* ================= Import / export ================= */
+    function exportGeoJSON() {
+        if (!state.sectors.length) return;
+        const features = state.sectors.flatMap((s) => {
+            const { polygon, end } = sectorShape(s);
+            const props = {
+                id: s.id, azimuth: s.az, distance: s.dist, width: s.width, color: s.color,
+                origin_lat: s.origin[0], origin_lng: s.origin[1],
+                end_lat: round(end[0], 7), end_lng: round(end[1], 7)
+            };
+            const geometry = polygon
+                ? { type: 'Polygon', coordinates: [[...polygon.map(([la, ln]) => [round(ln, 7), round(la, 7)]), [round(polygon[0][1], 7), round(polygon[0][0], 7)]]] }
+                : { type: 'LineString', coordinates: [[s.origin[1], s.origin[0]], [round(end[1], 7), round(end[0], 7)]] };
+            return [{ type: 'Feature', properties: props, geometry }];
+        });
+        const blob = new Blob([JSON.stringify({ type: 'FeatureCollection', features }, null, 2)], { type: 'application/geo+json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
+        a.href = url;
+        a.download = `azimuth-sectors-${stamp}.geojson`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        toast(`Експортовано секторів: ${state.sectors.length}`);
+    }
+
+    function importData(json) {
+        const items = Array.isArray(json) ? json
+            : json && Array.isArray(json.features) ? json.features.map((f) => f.properties || {})
+            : json && Array.isArray(json.sectors) ? json.sectors
+            : [];
+        let added = 0;
+        items.forEach((p) => {
+            const origin = Array.isArray(p.origin) ? p.origin.map(Number) : [Number(p.origin_lat), Number(p.origin_lng)];
+            const s = {
+                id: `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`,
+                origin,
+                az: normAz(Number(p.az ?? p.azimuth)),
+                dist: Number(p.dist ?? p.distance),
+                width: Number(p.width ?? 0),
+                color: /^#[0-9a-f]{3,8}$/i.test(p.color || '') ? p.color : COLORS[state.colorSeq % COLORS.length],
+                created: Date.now()
+            };
+            if (validSector(s) && validLatLng(s.origin[0], s.origin[1]) && s.dist > 0 && s.width >= 0 && s.width <= 360) {
+                state.colorSeq++;
+                state.sectors.push(s);
+                added++;
+            }
+        });
+        if (!added) {
+            toast('У файлі немає секторів');
+            return;
+        }
+        renderSectors();
+        saveState();
+        fitAll();
+        toast(`Імпортовано секторів: ${added}`);
+    }
+
+    el.exportBtn.addEventListener('click', exportGeoJSON);
+    el.importBtn.addEventListener('click', () => el.importInput.click());
+    el.importInput.addEventListener('change', async () => {
+        const file = el.importInput.files?.[0];
+        el.importInput.value = '';
+        if (!file) return;
+        try {
+            importData(JSON.parse(await file.text()));
+        } catch {
+            toast('Не вдалося прочитати файл');
+        }
+    });
+
+    /* ================= Search ================= */
+    function goTo(lat, lng, zoom = 17) {
+        closePanels();
+        map.flyTo([lat, lng], Math.max(map.getZoom(), zoom), { duration: 0.8 });
+        selectPoint(L.latLng(lat, lng));
+    }
+
+    el.searchInput.addEventListener('input', () => {
+        const c = parseCoordinates(el.searchInput.value);
+        el.coordDetected.hidden = !c;
+        if (c) el.coordDetected.textContent = `Координати: ${fmtLatLng(c.lat, c.lng)} — натисніть «Знайти»`;
+    });
+
+    function setResultsStatus(html) {
+        el.searchResults.innerHTML = `<li class="status-line">${html}</li>`;
+    }
+
+    function resultTitle(r) {
+        const a = r.address || {};
+        const street = a.road || a.pedestrian || a.footway || a.square || a.neighbourhood;
+        if (street) return { title: street, house: a.house_number || '' };
+        return { title: r.name || (r.display_name || '').split(',')[0], house: a.house_number || '' };
+    }
+
+    async function runSearch() {
+        const q = el.searchInput.value.trim();
+        if (!q) {
+            el.searchInput.focus();
+            return;
+        }
+        const c = parseCoordinates(q);
+        if (c) {
+            goTo(c.lat, c.lng);
+            toast(`Перехід до ${fmtLatLng(c.lat, c.lng)}`);
+            return;
+        }
+        if (q.length < 3) {
+            setResultsStatus('Введіть щонайменше 3 символи');
+            return;
+        }
+
+        if (state.searchAbort) state.searchAbort.abort();
+        const ctrl = new AbortController();
+        state.searchAbort = ctrl;
+        setResultsStatus('<span class="spinner"></span>Шукаємо…');
+
+        const b = map.getBounds().pad(2);
+        const params = new URLSearchParams({
+            q,
+            format: 'jsonv2',
+            addressdetails: '1',
+            limit: '10',
+            'accept-language': 'uk',
+            countrycodes: 'ua',
+            viewbox: `${b.getWest()},${b.getNorth()},${b.getEast()},${b.getSouth()}`,
+            bounded: '0'
+        });
+
+        try {
+            const res = await fetch(`https://nominatim.openstreetmap.org/search?${params}`, {
+                signal: ctrl.signal,
+                headers: { Accept: 'application/json' }
+            });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const data = await res.json();
+            if (ctrl.signal.aborted) return;
+            renderResults(data);
+        } catch (err) {
+            if (err.name === 'AbortError') return;
+            setResultsStatus('Помилка пошуку. Перевірте з’єднання та спробуйте ще раз');
+        } finally {
+            if (state.searchAbort === ctrl) state.searchAbort = null;
+        }
+    }
+
+    function renderResults(data) {
+        el.searchResults.replaceChildren();
+        if (!Array.isArray(data) || !data.length) {
+            setResultsStatus('Нічого не знайдено. Спробуйте інший запит');
+            return;
+        }
+        data.forEach((r) => {
+            const lat = parseFloat(r.lat);
+            const lng = parseFloat(r.lon);
+            if (!isNum(lat) || !isNum(lng)) return;
+            const { title, house } = resultTitle(r);
+
+            const li = document.createElement('li');
+            li.className = 'result';
+            li.tabIndex = 0;
+
+            const icon = document.createElement('div');
+            icon.className = 'result-icon';
+            icon.appendChild(svgIcon(ICONS.pin, 16, 2.2));
+
+            const body = document.createElement('div');
+            const main = document.createElement('div');
+            main.className = 'result-main';
+            main.textContent = title;
+            if (house) {
+                const badge = document.createElement('span');
+                badge.className = 'house';
+                badge.textContent = house;
+                main.appendChild(badge);
+            }
+            const sub = document.createElement('div');
+            sub.className = 'result-sub';
+            sub.textContent = r.display_name || '';
+            body.append(main, sub);
+
+            li.append(icon, body);
+            const pick = () => goTo(lat, lng, house ? 18 : 16);
+            li.addEventListener('click', pick);
+            li.addEventListener('keydown', (e) => { if (e.key === 'Enter') pick(); });
+            el.searchResults.appendChild(li);
+        });
+    }
+
+    el.searchForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        runSearch();
+    });
+
+    /* ================= Map controls ================= */
+    el.zoomInBtn.addEventListener('click', () => map.zoomIn(1));
+    el.zoomOutBtn.addEventListener('click', () => map.zoomOut(1));
+
+    let layerNameTimer = null;
+    el.layerBtn.addEventListener('click', () => {
+        map.removeLayer(LAYERS[state.layer].layer);
+        state.layer = LAYER_ORDER[(LAYER_ORDER.indexOf(state.layer) + 1) % LAYER_ORDER.length];
+        LAYERS[state.layer].layer.addTo(map);
+        el.layerName.textContent = LAYERS[state.layer].name;
+        el.layerName.classList.add('show');
+        clearTimeout(layerNameTimer);
+        layerNameTimer = setTimeout(() => el.layerName.classList.remove('show'), 1600);
+        saveState();
+    });
+
+    el.locateBtn.addEventListener('click', () => {
+        if (!('geolocation' in navigator)) {
+            toast('Геолокація недоступна');
+            return;
+        }
+        el.locateBtn.classList.add('busy');
+        navigator.geolocation.getCurrentPosition((pos) => {
+            el.locateBtn.classList.remove('busy');
+            el.locateBtn.classList.add('active');
+            const { latitude: lat, longitude: lng, accuracy } = pos.coords;
+            if (locateCircle) map.removeLayer(locateCircle);
+            locateCircle = L.circle([lat, lng], {
+                radius: accuracy, color: '#2563eb', weight: 1, fillOpacity: 0.08, interactive: false
+            }).addTo(map);
+            map.flyTo([lat, lng], Math.max(map.getZoom(), 17), { duration: 0.8 });
+            selectPoint(L.latLng(lat, lng));
+            toast(`Ваше місце (точність ±${Math.round(accuracy)} м)`);
+        }, (err) => {
+            el.locateBtn.classList.remove('busy');
+            toast(err.code === 1 ? 'Доступ до геолокації заборонено' : 'Не вдалося визначити місце');
+        }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 });
+    });
+
+    const EYE = '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>';
+    const EYE_OFF = '<path d="M3 3l18 18"/><path d="M10.6 5.1A10.4 10.4 0 0 1 12 5c6.5 0 10 7 10 7a17 17 0 0 1-3.2 4.2M6.6 6.6C3.8 8.4 2 12 2 12s3.5 7 10 7c1.9 0 3.5-.5 4.9-1.3"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/>';
+
+    el.hudBtn.addEventListener('click', () => {
+        state.hud = !state.hud;
+        document.body.classList.toggle('hud-hidden', !state.hud);
+        el.hudBtn.setAttribute('aria-pressed', String(!state.hud));
+        el.hudBtn.setAttribute('aria-label', state.hud ? 'Сховати інтерфейс' : 'Показати інтерфейс');
+        el.hudIcon.innerHTML = state.hud ? EYE : EYE_OFF;
+        if (!state.hud) closePanels();
+        updateSheetHeight();
+    });
+
+    map.on('moveend', saveSoon);
+
+    /* ================= Init ================= */
+    renderSectors();
+    refreshForm();
+    updateSheetHeight();
+
+    // Exposed for debugging / tests.
+    window.AzimuthMap = { parseCoordinates, destination, sectorShape, state };
+})();
+</script>
+</body>
+</html>
