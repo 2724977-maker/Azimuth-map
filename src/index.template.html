@@ -1,0 +1,2276 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#0c1420">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Azimuth">
+    <meta name="description" content="Azimuth — побудова секторів азимуту від базової станції на мапі">
+    <title>Azimuth Map</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%230c1420'/%3E%3Cpath d='M16 16L9 7a11 11 0 0 1 14 0z' fill='%23ff5b2e'/%3E%3Ccircle cx='16' cy='16' r='2.6' fill='%23fff'/%3E%3C/svg%3E">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap">
+    <!-- Leaflet 1.9.4 (BSD-2-Clause, © Volodymyr Agafonkin) вбудовано, щоб мапа працювала без CDN -->
+    <style>
+/*__LEAFLET_CSS__*/
+    </style>
+    <script>
+/*__LEAFLET_JS__*/
+    </script>
+    <style>
+        /* Layout: full-bleed map; floating search bar on top, instrument sheet with compass dial at the bottom, tool rail on the right. */
+        :root {
+            --surface: rgba(250, 251, 252, 0.84);
+            --surface-solid: #fafbfc;
+            --raised: #ffffff;
+            --ink: #0c1420;
+            --ink-2: #3a4657;
+            --muted: #7b8698;
+            --line: rgba(12, 20, 32, 0.09);
+            --fill: rgba(12, 20, 32, 0.05);
+            --fill-2: rgba(12, 20, 32, 0.09);
+            --accent: #ff5b2e;
+            --accent-soft: rgba(255, 91, 46, 0.14);
+            --accent-ink: #ffffff;
+            --primary: #0c1420;
+            --primary-ink: #ffffff;
+            --danger: #e5484d;
+            --danger-soft: rgba(229, 72, 77, 0.12);
+            --map-bg: #e4e7eb;
+            --shadow: 0 18px 50px -12px rgba(12, 20, 32, 0.28), 0 2px 6px rgba(12, 20, 32, 0.06);
+            --shadow-sm: 0 6px 18px -6px rgba(12, 20, 32, 0.25);
+            --blur: blur(24px) saturate(180%);
+            --font-ui: "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+            --font-num: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+            --r-xl: 28px;
+            --r-lg: 20px;
+            --r-md: 14px;
+            --ease: cubic-bezier(0.32, 0.72, 0, 1);
+            --safe-t: env(safe-area-inset-top, 0px);
+            --safe-b: env(safe-area-inset-bottom, 0px);
+            --sheet-h: 0px;
+            color-scheme: light;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --surface: rgba(17, 22, 30, 0.84);
+                --surface-solid: #11161e;
+                --raised: #1a212c;
+                --ink: #edf1f6;
+                --ink-2: #c1c9d4;
+                --muted: #8792a3;
+                --line: rgba(255, 255, 255, 0.08);
+                --fill: rgba(255, 255, 255, 0.06);
+                --fill-2: rgba(255, 255, 255, 0.11);
+                --accent: #ff7247;
+                --accent-soft: rgba(255, 114, 71, 0.18);
+                --primary: #edf1f6;
+                --primary-ink: #0c1420;
+                --danger: #ff6b6f;
+                --danger-soft: rgba(255, 107, 111, 0.15);
+                --map-bg: #1b2028;
+                --shadow: 0 18px 50px -12px rgba(0, 0, 0, 0.7), 0 2px 6px rgba(0, 0, 0, 0.3);
+                --shadow-sm: 0 6px 18px -6px rgba(0, 0, 0, 0.6);
+                color-scheme: dark;
+            }
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        html, body {
+            margin: 0;
+            height: 100%;
+            overflow: hidden;
+            background: var(--map-bg);
+            color: var(--ink);
+            font-family: var(--font-ui);
+            font-size: 15px;
+            -webkit-font-smoothing: antialiased;
+            -webkit-user-select: none;
+            user-select: none;
+            overscroll-behavior: none;
+        }
+
+        button { font: inherit; color: inherit; cursor: pointer; border: 0; background: none; padding: 0; }
+        button:disabled { cursor: not-allowed; }
+        button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+        [hidden] { display: none !important; }
+        svg { display: block; flex-shrink: 0; }
+        .num { font-family: var(--font-num); font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+
+        #map {
+            position: fixed;
+            top: 0; right: 0; bottom: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 0;
+            background: var(--map-bg);
+        }
+
+        .glass {
+            background: var(--surface);
+            -webkit-backdrop-filter: var(--blur);
+            backdrop-filter: var(--blur);
+            border: 1px solid var(--line);
+            box-shadow: var(--shadow);
+        }
+
+        /* ---------- Search bar ---------- */
+        .topbar {
+            position: fixed;
+            top: calc(10px + var(--safe-t));
+            left: 12px;
+            right: 12px;
+            z-index: 30;
+            display: flex;
+            gap: 8px;
+            transition: transform 0.45s var(--ease), opacity 0.3s;
+        }
+
+        .searchbar {
+            flex: 1;
+            min-width: 0;
+            height: 54px;
+            border-radius: 99px;
+            display: flex;
+            align-items: center;
+            padding: 0 7px;
+            gap: 8px;
+        }
+
+        .logo {
+            width: 40px; height: 40px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: var(--primary-ink);
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .searchbar input {
+            flex: 1;
+            min-width: 0;
+            height: 100%;
+            border: 0;
+            outline: 0;
+            background: transparent;
+            font: inherit;
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--ink);
+            -webkit-user-select: text;
+            user-select: text;
+        }
+        .searchbar input::placeholder { color: var(--muted); font-weight: 500; }
+        .searchbar input::-webkit-search-cancel-button { display: none; }
+
+        .round-btn {
+            width: 40px; height: 40px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            color: var(--ink-2);
+            flex-shrink: 0;
+            transition: background 0.2s, transform 0.15s;
+        }
+        .round-btn:hover { background: var(--fill); }
+        .round-btn:active { transform: scale(0.92); }
+        .round-btn.solid { background: var(--fill); }
+        .round-btn.danger { color: var(--danger); background: var(--danger-soft); }
+
+        .sectors-btn {
+            height: 54px;
+            min-width: 54px;
+            border-radius: 99px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 0 16px 0 14px;
+            font-weight: 800;
+            transition: transform 0.15s, background 0.2s, color 0.2s;
+        }
+        .sectors-btn:active { transform: scale(0.95); }
+        .sectors-btn[aria-expanded="true"] { background: var(--primary); color: var(--primary-ink); border-color: transparent; }
+        .sectors-btn .num { font-size: 0.95rem; }
+
+        /* ---------- Panels ---------- */
+        .panel {
+            position: fixed;
+            top: calc(74px + var(--safe-t));
+            left: 12px;
+            right: 12px;
+            z-index: 28;
+            max-height: calc(100vh - var(--safe-t) - var(--sheet-h) - 100px);
+            max-height: calc(100dvh - var(--safe-t) - var(--sheet-h) - 100px);
+            min-height: 120px;
+            border-radius: var(--r-xl);
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            animation: drop 0.32s var(--ease);
+        }
+        @keyframes drop {
+            from { opacity: 0; transform: translateY(-10px) scale(0.98); }
+            to { opacity: 1; transform: none; }
+        }
+
+        .panel-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+        .panel-title { margin: 0 0 0 4px; font-size: 1.2rem; font-weight: 800; letter-spacing: -0.02em; }
+        .panel-title small { color: var(--muted); font-weight: 600; font-size: 0.85rem; margin-left: 6px; }
+
+        .scroll {
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            margin: 0 -8px;
+            padding: 0 8px;
+            scrollbar-width: thin;
+            min-height: 0;
+        }
+
+        .eyebrow {
+            font-size: 0.68rem;
+            font-weight: 800;
+            letter-spacing: 0.09em;
+            text-transform: uppercase;
+            color: var(--muted);
+        }
+
+        .chips {
+            display: flex;
+            gap: 6px;
+            overflow-x: auto;
+            scrollbar-width: none;
+            -webkit-overflow-scrolling: touch;
+        }
+        .chips::-webkit-scrollbar { display: none; }
+
+        .chip {
+            flex-shrink: 0;
+            height: 34px;
+            padding: 0 13px;
+            border-radius: 99px;
+            background: var(--fill);
+            font-size: 0.82rem;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--ink-2);
+            transition: background 0.2s, color 0.2s, transform 0.15s;
+        }
+        .chip:active { transform: scale(0.95); }
+        .chip:disabled { opacity: 0.4; }
+        .chip.on { background: var(--primary); color: var(--primary-ink); }
+        .chip.danger { color: var(--danger); background: var(--danger-soft); }
+
+        .sector-list, .results { list-style: none; margin: 0; padding: 6px 0 0; }
+
+        .sector-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 8px;
+            border-radius: var(--r-md);
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .sector-item + .sector-item { border-top: 1px solid var(--line); }
+        .sector-item:hover { background: var(--fill); }
+
+        .wedge-icon {
+            width: 44px; height: 44px;
+            border-radius: 14px;
+            background: var(--fill);
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .sector-main { flex: 1; min-width: 0; }
+        .sector-title { display: flex; align-items: baseline; gap: 8px; }
+        .sector-title .num { font-size: 1.15rem; font-weight: 700; }
+        .sector-title span { color: var(--ink-2); font-weight: 700; font-size: 0.82rem; }
+        .sector-sub {
+            margin-top: 2px;
+            font-family: var(--font-num);
+            font-size: 0.72rem;
+            color: var(--muted);
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .sector-actions { display: flex; gap: 4px; }
+        .sector-actions .round-btn { width: 36px; height: 36px; }
+
+        .empty {
+            padding: 22px 12px 14px;
+            text-align: center;
+            color: var(--muted);
+            font-size: 0.88rem;
+            line-height: 1.5;
+        }
+        .empty svg { margin: 0 auto 12px; }
+        .empty strong { display: block; color: var(--ink); font-size: 1rem; font-weight: 800; margin-bottom: 4px; }
+
+        /* Search results */
+        .search-hint { font-size: 0.82rem; color: var(--muted); line-height: 1.6; padding: 0 4px; }
+        .search-hint .num {
+            display: inline-block;
+            font-size: 0.74rem;
+            background: var(--fill);
+            color: var(--ink);
+            padding: 1px 7px;
+            border-radius: 6px;
+            margin: 2px 0;
+        }
+        .coord-hit {
+            display: flex; align-items: center; gap: 12px;
+            margin-top: 10px;
+            padding: 12px;
+            border-radius: var(--r-md);
+            background: var(--accent-soft);
+            color: var(--ink);
+            width: 100%;
+            text-align: left;
+        }
+        .coord-hit .result-icon { background: var(--accent); color: var(--accent-ink); }
+        .coord-hit strong { display: block; font-size: 0.9rem; }
+
+        .result {
+            display: flex; gap: 12px; align-items: flex-start;
+            padding: 11px 8px;
+            border-radius: var(--r-md);
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .result:hover, .result:focus-visible { background: var(--fill); }
+        .result-icon {
+            width: 36px; height: 36px; border-radius: 12px;
+            background: var(--fill); color: var(--ink-2);
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        }
+        .result-main { font-weight: 700; font-size: 0.92rem; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+        .result-sub { font-size: 0.76rem; color: var(--muted); margin-top: 2px; line-height: 1.4; }
+        .house {
+            font-family: var(--font-num);
+            font-size: 0.68rem; font-weight: 700;
+            background: var(--primary); color: var(--primary-ink);
+            padding: 1px 7px; border-radius: 6px;
+        }
+        .status-line { padding: 18px 8px; text-align: center; color: var(--muted); font-size: 0.86rem; }
+
+        .spinner {
+            width: 16px; height: 16px;
+            border: 2px solid var(--fill-2);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            display: inline-block;
+            vertical-align: -3px;
+            margin-right: 8px;
+            animation: spin 0.7s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ---------- Right rail ---------- */
+        .rail {
+            position: fixed;
+            right: 12px;
+            bottom: calc(var(--sheet-h) + 14px);
+            z-index: 20;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            transition: bottom 0.45s var(--ease);
+        }
+        .rail-group {
+            display: flex;
+            flex-direction: column;
+            border-radius: 18px;
+            overflow: hidden;
+            transition: opacity 0.3s, transform 0.45s var(--ease);
+        }
+        .rail-btn {
+            width: 46px; height: 46px;
+            display: flex; align-items: center; justify-content: center;
+            color: var(--ink);
+            transition: background 0.15s;
+        }
+        .rail-btn + .rail-btn { border-top: 1px solid var(--line); }
+        .rail-btn:active { background: var(--fill-2); }
+        .rail-btn.active { color: var(--accent); }
+        .rail-btn.busy svg { animation: spin 1s linear infinite; }
+
+        .layers-pop {
+            position: fixed;
+            right: 68px;
+            bottom: calc(var(--sheet-h) + 14px);
+            z-index: 29;
+            width: 220px;
+            border-radius: var(--r-lg);
+            padding: 8px;
+            animation: drop 0.25s var(--ease);
+        }
+        .layers-pop .eyebrow { padding: 6px 8px 8px; }
+        .layer-opt {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px;
+            border-radius: 12px;
+            text-align: left;
+            font-weight: 700;
+            font-size: 0.9rem;
+        }
+        .layer-opt:hover { background: var(--fill); }
+        .layer-thumb {
+            width: 38px; height: 38px;
+            border-radius: 10px;
+            flex-shrink: 0;
+            border: 1px solid var(--line);
+        }
+        .layer-opt small { display: block; color: var(--muted); font-weight: 600; font-size: 0.72rem; }
+        .layer-opt[aria-checked="true"] .layer-thumb { box-shadow: 0 0 0 2px var(--surface-solid), 0 0 0 4px var(--accent); }
+
+        /* ---------- Instrument sheet ---------- */
+        .sheet {
+            position: fixed;
+            left: 10px;
+            right: 10px;
+            bottom: calc(10px + var(--safe-b));
+            z-index: 30;
+            border-radius: var(--r-xl);
+            padding: 4px 14px 14px;
+            transition: transform 0.45s var(--ease), opacity 0.3s;
+        }
+
+        .grabber {
+            display: block;
+            width: 100%;
+            height: 18px;
+            position: relative;
+        }
+        .grabber::before {
+            content: "";
+            position: absolute;
+            left: 50%; top: 7px;
+            width: 38px; height: 5px;
+            margin-left: -19px;
+            border-radius: 99px;
+            background: var(--fill-2);
+        }
+
+        .station {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-height: 44px;
+            margin-bottom: 10px;
+        }
+        .station-mark {
+            width: 36px; height: 36px;
+            border-radius: 12px;
+            background: var(--fill);
+            color: var(--muted);
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+            transition: background 0.25s, color 0.25s;
+        }
+        .station.has-point .station-mark { background: var(--accent); color: var(--accent-ink); }
+        .station-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+        .station-value {
+            font-size: 0.9rem;
+            font-weight: 700;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .station:not(.has-point) .station-value { color: var(--ink-2); font-weight: 600; }
+        .station.has-point .station-value { font-family: var(--font-num); font-size: 0.88rem; }
+        .station .round-btn { width: 36px; height: 36px; }
+
+        .instrument {
+            display: flex;
+            gap: 14px;
+            align-items: stretch;
+        }
+
+        .dial-wrap {
+            position: relative;
+            width: 150px;
+            flex-shrink: 0;
+            align-self: center;
+        }
+        .dial {
+            width: 150px; height: 150px;
+            touch-action: none;
+            cursor: grab;
+            border-radius: 50%;
+        }
+        .dial:active { cursor: grabbing; }
+        .dial .face { fill: var(--fill); stroke: var(--line); }
+        .dial .tick { stroke: var(--muted); stroke-linecap: round; }
+        .dial .tick.major { stroke: var(--ink-2); }
+        .dial .cardinal { fill: var(--ink-2); font: 800 11px var(--font-ui); text-anchor: middle; dominant-baseline: central; }
+        .dial .cardinal.north { fill: var(--accent); }
+        .dial .wedge { fill-opacity: 0.2; stroke-width: 1.5; }
+        .dial .needle { stroke-width: 3.5; stroke-linecap: round; }
+        .dial .hub { fill: var(--surface-solid); stroke-width: 3; }
+        .dial .needle-g { transition: transform 0.12s linear; }
+        .dial.dragging .needle-g { transition: none; }
+        .dial-readout {
+            position: absolute;
+            left: 0; right: 0;
+            bottom: -2px;
+            text-align: center;
+            pointer-events: none;
+        }
+
+        .fields {
+            flex: 1;
+            min-width: 0;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: auto auto;
+            gap: 8px;
+        }
+
+        .field {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 2px;
+            min-height: 56px;
+            padding: 6px 12px;
+            border-radius: 16px;
+            background: var(--fill);
+            border: 1.5px solid transparent;
+            cursor: text;
+            min-width: 0;
+            transition: border-color 0.2s, background 0.2s;
+        }
+        .field.az { grid-column: 1 / -1; min-height: 72px; }
+        .field:focus-within { border-color: var(--accent); background: var(--accent-soft); }
+        .field.invalid { border-color: var(--danger); background: var(--danger-soft); }
+        .field-row { display: flex; align-items: baseline; gap: 4px; min-width: 0; }
+        .field input {
+            flex: 0 1 auto;
+            width: 2ch;
+            max-width: 100%;
+            min-width: 1ch;
+            border: 0;
+            outline: 0;
+            background: transparent;
+            padding: 0;
+            font-family: var(--font-num);
+            font-variant-numeric: tabular-nums;
+            font-size: 1.2rem;
+            font-weight: 700;
+            letter-spacing: -0.03em;
+            color: var(--ink);
+            -webkit-user-select: text;
+            user-select: text;
+        }
+        .field.az input { font-size: 2rem; }
+        .field .unit { color: var(--muted); font-weight: 700; font-size: 0.85rem; flex-shrink: 0; }
+        .field.az .unit { font-size: 1.1rem; }
+
+        .presets {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin: 12px -14px 0;
+            padding: 0 14px;
+        }
+        .presets .sep { width: 1px; height: 20px; background: var(--line); flex-shrink: 0; margin: 0 4px; }
+        .presets .eyebrow { flex-shrink: 0; margin-right: 2px; }
+
+        .cta {
+            width: 100%;
+            height: 54px;
+            margin-top: 12px;
+            border-radius: 18px;
+            background: var(--primary);
+            color: var(--primary-ink);
+            font-weight: 800;
+            font-size: 1rem;
+            letter-spacing: -0.01em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: transform 0.15s, opacity 0.2s;
+        }
+        .cta:active:not(:disabled) { transform: scale(0.98); }
+        .cta:disabled { opacity: 0.35; }
+        .cta .swatch {
+            width: 12px; height: 12px;
+            border-radius: 50%;
+            box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.25);
+        }
+
+        /* Compact sheet */
+        .sheet.compact .dial-wrap,
+        .sheet.compact .presets { display: none; }
+        .sheet.compact .fields { grid-template-columns: 1.1fr 1.2fr 1fr; }
+        .sheet.compact .field.az { grid-column: auto; min-height: 56px; }
+        .sheet.compact .field.az input { font-size: 1.2rem; }
+        .sheet.compact .field.az .unit { font-size: 0.85rem; }
+
+        /* ---------- HUD hidden ---------- */
+        .hud-hidden .topbar { transform: translateY(calc(-100% - 40px)); opacity: 0; pointer-events: none; }
+        .hud-hidden .sheet { transform: translateY(calc(100% + 40px)); opacity: 0; pointer-events: none; }
+        .hud-hidden .panel, .hud-hidden .layers-pop { display: none; }
+        .hud-hidden .rail-group.hideable { opacity: 0; transform: translateX(80px); pointer-events: none; }
+
+        /* ---------- Tile notice ---------- */
+        .tile-notice {
+            position: fixed;
+            top: 42%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: calc(100% - 40px);
+            max-width: 360px;
+            z-index: 22;
+            padding: 22px;
+            border-radius: var(--r-xl);
+            text-align: center;
+            line-height: 1.5;
+        }
+        .tile-notice strong { display: block; font-size: 1.1rem; font-weight: 800; margin: 10px 0 6px; }
+        .tile-notice p { margin: 0 0 16px; color: var(--ink-2); font-size: 0.88rem; }
+        .tile-notice svg { margin: 0 auto; color: var(--accent); }
+        .tile-notice .chip { height: 42px; padding: 0 20px; background: var(--primary); color: var(--primary-ink); }
+
+        /* ---------- Toast ---------- */
+        .toast {
+            position: fixed;
+            bottom: calc(var(--sheet-h) + 14px);
+            left: 50%;
+            z-index: 2000;
+            transform: translate(-50%, 12px);
+            width: max-content;
+            max-width: calc(100% - 32px);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 10px 10px 18px;
+            min-height: 44px;
+            border-radius: 99px;
+            background: #0c1420;
+            color: #ffffff;
+            font-size: 0.88rem;
+            font-weight: 600;
+            box-shadow: 0 12px 30px -8px rgba(0, 0, 0, 0.45);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s, transform 0.35s var(--ease);
+        }
+        .toast:not(.with-action) { padding-right: 18px; }
+        .toast.show { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
+        .toast button {
+            background: rgba(255, 255, 255, 0.14);
+            color: #ffb59e;
+            border-radius: 99px;
+            padding: 6px 13px;
+            font-weight: 800;
+            font-size: 0.8rem;
+        }
+
+        /* ---------- Map markers ---------- */
+        .pick-icon, .label-icon { background: none; border: 0; }
+        .pick { position: relative; width: 72px; height: 72px; }
+        .pick-pulse {
+            position: absolute;
+            top: 22px; left: 22px; width: 28px; height: 28px;
+            border-radius: 50%;
+            background: var(--pick-color, #ff5b2e);
+            opacity: 0.35;
+            animation: pulse 1.8s ease-out infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(0.5); opacity: 0.55; }
+            100% { transform: scale(2.2); opacity: 0; }
+        }
+        .pick-needle {
+            position: absolute;
+            top: 0; left: 0; width: 72px; height: 72px;
+            transition: transform 0.2s var(--ease);
+        }
+        .pick-needle::before {
+            content: "";
+            position: absolute;
+            left: 34px; top: 6px;
+            width: 4px; height: 30px;
+            border-radius: 4px;
+            background: var(--pick-color, #ff5b2e);
+        }
+        .pick-needle::after {
+            content: "";
+            position: absolute;
+            left: 29px; top: 0;
+            border-left: 7px solid transparent;
+            border-right: 7px solid transparent;
+            border-bottom: 11px solid var(--pick-color, #ff5b2e);
+        }
+        .pick-dot {
+            position: absolute;
+            top: 27px; left: 27px; width: 18px; height: 18px;
+            border-radius: 50%;
+            background: #ffffff;
+            border: 5px solid var(--pick-color, #ff5b2e);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+        }
+        .pick-bubble {
+            position: absolute;
+            left: 50%; bottom: calc(100% - 2px);
+            transform: translateX(-50%);
+            background: #0c1420;
+            color: #ffffff;
+            font: 700 0.8rem var(--font-num);
+            padding: 4px 9px;
+            border-radius: 9px;
+            white-space: nowrap;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .map-label {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+            padding: 4px 10px 4px 6px;
+            border-radius: 99px;
+            background: #ffffff;
+            color: #0c1420;
+            font: 700 0.74rem var(--font-num);
+            box-shadow: 0 4px 14px rgba(12, 20, 32, 0.25);
+            pointer-events: none;
+        }
+        .map-label i { width: 10px; height: 10px; border-radius: 50%; display: block; }
+
+        /* ---------- Leaflet tweaks ---------- */
+        .leaflet-container { font-family: var(--font-ui); background: var(--map-bg); }
+        .leaflet-bottom { bottom: var(--sheet-h); transition: bottom 0.45s var(--ease); }
+        .leaflet-control-attribution {
+            background: var(--surface) !important;
+            color: var(--muted) !important;
+            border-radius: 8px 0 0 0;
+            font-size: 10px !important;
+        }
+        .leaflet-control-attribution a { color: var(--muted) !important; }
+        .leaflet-control-scale { margin-left: 14px !important; margin-bottom: 8px !important; }
+        .leaflet-control-scale-line {
+            background: var(--surface) !important;
+            border-color: var(--ink) !important;
+            color: var(--ink);
+            font: 700 10px var(--font-num);
+            border-radius: 0 0 4px 4px;
+        }
+        .leaflet-tooltip { font-family: var(--font-ui); font-weight: 700; border-radius: 8px; }
+
+        /* ---------- Wide screens ---------- */
+        @media (min-width: 760px) {
+            .topbar { left: 16px; right: auto; width: 440px; top: calc(16px + var(--safe-t)); }
+            .panel { left: 16px; right: auto; width: 440px; top: calc(82px + var(--safe-t)); max-height: calc(100vh - 100px); }
+            .sheet { left: 16px; right: auto; width: 440px; bottom: calc(16px + var(--safe-b)); }
+            .rail { bottom: 36px; right: 16px; }
+            .layers-pop { bottom: 36px; right: 74px; }
+            .toast { bottom: 36px; }
+            .leaflet-bottom.leaflet-left { bottom: 0; left: 470px; }
+            .leaflet-bottom.leaflet-right { bottom: 0; }
+        }
+
+        @media (max-width: 359px) {
+            .dial-wrap, .dial { width: 128px; height: 128px; }
+            .field.az input { font-size: 1.6rem; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { animation: none !important; transition: none !important; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="map" role="application" aria-label="Мапа"></div>
+
+<!-- Search bar -->
+<header class="topbar">
+    <form class="searchbar glass" id="searchForm" role="search" autocomplete="off">
+        <span class="logo" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24"><path d="M12 12L6.2 4.4a9.5 9.5 0 0 1 11.6 0z" fill="#ff5b2e"/><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="2.2" fill="currentColor"/></svg>
+        </span>
+        <input type="search" id="searchInput" enterkeyhint="search" placeholder="Адреса або координати" aria-label="Адреса або координати">
+        <button class="round-btn" type="button" id="searchClear" aria-label="Очистити пошук" hidden>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+        <button class="round-btn solid" type="submit" id="searchSubmit" aria-label="Знайти" hidden>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+        </button>
+    </form>
+    <button class="sectors-btn glass" id="listBtn" aria-expanded="false" aria-controls="listPanel" aria-label="Сектори">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5" stroke-opacity=".35"/><path d="M12 12L5.6 5a9.5 9.5 0 0 1 12.8 0z" fill="currentColor" fill-opacity=".25"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/></svg>
+        <span class="num" id="countBadge">0</span>
+    </button>
+</header>
+
+<!-- Search panel -->
+<section class="panel glass" id="searchPanel" hidden aria-label="Пошук">
+    <div class="scroll">
+        <div class="search-hint" id="searchHint">
+            Введіть адресу або координати у будь-якому форматі:<br>
+            <span class="num">Хрещатик 15, Київ</span> <span class="num">50.4501, 30.5234</span> <span class="num">48°44'14"N 37°35'13"E</span>
+        </div>
+        <button class="coord-hit" type="button" id="coordHit" hidden>
+            <span class="result-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2" fill="currentColor"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></span>
+            <span><strong>Перейти до координат</strong><span class="num" id="coordHitText"></span></span>
+        </button>
+        <ul class="results" id="searchResults"></ul>
+    </div>
+</section>
+
+<!-- Sector list -->
+<section class="panel glass" id="listPanel" hidden aria-label="Список секторів">
+    <div class="panel-head">
+        <h2 class="panel-title">Сектори <small class="num" id="listCount">0</small></h2>
+        <button class="round-btn solid" data-close aria-label="Закрити">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+    </div>
+    <div class="chips">
+        <button class="chip" id="fitBtn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+            Показати всі
+        </button>
+        <button class="chip" id="exportBtn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>
+            Експорт
+        </button>
+        <button class="chip" id="importBtn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4M7 9l5-5 5 5M5 20h14"/></svg>
+            Імпорт
+        </button>
+        <button class="chip danger" id="clearBtn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>
+            Очистити
+        </button>
+    </div>
+    <div class="scroll">
+        <ul class="sector-list" id="sectorList"></ul>
+        <div class="empty" id="emptyState">
+            <svg width="64" height="64" viewBox="0 0 64 64" fill="none"><circle cx="32" cy="32" r="29" stroke="currentColor" stroke-opacity=".25" stroke-width="2" stroke-dasharray="3 5"/><path d="M32 32L17 9.5a27 27 0 0 1 30 0z" fill="#ff5b2e" fill-opacity=".2" stroke="#ff5b2e" stroke-width="2" stroke-linejoin="round"/><circle cx="32" cy="32" r="4" fill="#ff5b2e"/></svg>
+            <strong>Секторів ще немає</strong>
+            Торкніться мапи, щоб поставити базову станцію,<br>поверніть стрілку компаса й натисніть «Встановити сектор».
+        </div>
+    </div>
+    <input type="file" id="importInput" accept=".json,.geojson,application/json,application/geo+json" hidden>
+</section>
+
+<!-- Right rail -->
+<div class="rail">
+    <div class="rail-group glass hideable">
+        <button class="rail-btn" id="zoomInBtn" aria-label="Наблизити">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        </button>
+        <button class="rail-btn" id="zoomOutBtn" aria-label="Віддалити">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12h14"/></svg>
+        </button>
+    </div>
+    <div class="rail-group glass hideable">
+        <button class="rail-btn" id="layerBtn" aria-label="Шари мапи" aria-expanded="false" aria-controls="layersPop">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></svg>
+        </button>
+        <button class="rail-btn" id="locateBtn" aria-label="Моє місцезнаходження">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M3 11l18-8-8 18-2-8z"/></svg>
+        </button>
+    </div>
+    <div class="rail-group glass">
+        <button class="rail-btn" id="hudBtn" aria-label="Сховати інтерфейс" aria-pressed="false">
+            <svg id="hudIcon" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+    </div>
+</div>
+
+<div class="layers-pop glass" id="layersPop" hidden role="radiogroup" aria-label="Шар мапи">
+    <div class="eyebrow">Шар мапи</div>
+    <div id="layerOptions"></div>
+</div>
+
+<!-- Instrument sheet -->
+<footer class="sheet glass" id="sheet">
+    <button class="grabber" type="button" id="grabber" aria-label="Згорнути або розгорнути панель" aria-expanded="true"></button>
+    <div class="station" id="station">
+        <span class="station-mark" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 10v11M8.5 21h7"/><circle cx="12" cy="8" r="2"/><path d="M7.8 3.8a6 6 0 0 0 0 8.4M16.2 3.8a6 6 0 0 1 0 8.4"/></svg>
+        </span>
+        <div class="station-info">
+            <span class="eyebrow">Базова станція</span>
+            <span class="station-value" id="pointText">Торкніться мапи, щоб обрати точку</span>
+        </div>
+        <button class="round-btn solid" type="button" id="copyPointBtn" aria-label="Копіювати координати" hidden>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="3"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>
+        </button>
+        <button class="round-btn solid" type="button" id="clearPointBtn" aria-label="Скасувати вибір точки" hidden>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+    </div>
+
+    <form id="sectorForm" autocomplete="off">
+        <div class="instrument">
+            <div class="dial-wrap">
+                <svg class="dial" id="dial" viewBox="-100 -100 200 200" role="slider" tabindex="0"
+                     aria-label="Азимут" aria-valuemin="0" aria-valuemax="359" aria-valuenow="0">
+                    <circle class="face" r="97"/>
+                    <g id="dialTicks"></g>
+                    <path class="wedge" id="dialWedge"/>
+                    <g class="needle-g" id="dialNeedle">
+                        <line class="needle" id="dialNeedleLine" x1="0" y1="0" x2="0" y2="-74"/>
+                        <circle id="dialNeedleTip" cx="0" cy="-74" r="5"/>
+                    </g>
+                    <circle class="hub" id="dialHub" r="8"/>
+                </svg>
+            </div>
+            <div class="fields">
+                <label class="field az" id="azField">
+                    <span class="eyebrow">Азимут</span>
+                    <span class="field-row">
+                        <input type="text" id="azInput" inputmode="decimal" enterkeyhint="done" aria-label="Азимут, градуси">
+                        <span class="unit">°</span>
+                    </span>
+                </label>
+                <label class="field" id="distField">
+                    <span class="eyebrow">Дальність</span>
+                    <span class="field-row">
+                        <input type="text" id="distInput" inputmode="decimal" enterkeyhint="done" aria-label="Дальність, метри">
+                        <span class="unit">м</span>
+                    </span>
+                </label>
+                <label class="field" id="widthField">
+                    <span class="eyebrow">Ширина</span>
+                    <span class="field-row">
+                        <input type="text" id="widthInput" inputmode="decimal" enterkeyhint="done" aria-label="Ширина сектора, градуси">
+                        <span class="unit">°</span>
+                    </span>
+                </label>
+            </div>
+        </div>
+
+        <div class="presets chips" id="presets"></div>
+
+        <button class="cta" type="submit" id="addBtn" disabled>
+            <span class="swatch" id="nextSwatch"></span>
+            Встановити сектор
+        </button>
+    </form>
+</footer>
+
+<div class="tile-notice glass" id="tileNotice" hidden role="alert">
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2z"/><path d="M3 3l18 18"/></svg>
+    <strong>Мапа не завантажується</strong>
+    <p>Тайли мапи не отримано з інтернету. Якщо файл відкрито в застосунку Claude чи іншому переглядачі файлів, відкрийте сторінку в браузері (Chrome, Safari).</p>
+    <button class="chip" type="button" id="tileRetryBtn">Спробувати ще раз</button>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function () {
+    'use strict';
+
+    if (!window.L) {
+        document.body.innerHTML = '<div style="position:fixed;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center;font:600 16px/1.5 system-ui,sans-serif;color:#0c1420;background:#e4e7eb">' +
+            'Не вдалося завантажити бібліотеку мапи.<br>Оновіть сторінку.</div>';
+        return;
+    }
+
+    /* ================= Constants ================= */
+    var STORAGE_KEY = 'azimuth-map:v2';
+    var EARTH_R = 6378137;
+    var DEFAULT_VIEW = { center: [48.73723, 37.58702], zoom: 16 };
+    var COLORS = ['#ff5b2e', '#2f6bff', '#13a35b', '#9b51e0', '#f2a900', '#00a3bf', '#e8417e', '#5b6b7f'];
+    var LIMITS = { dist: { min: 10, max: 50000 }, width: { min: 0, max: 360 } };
+    var DIST_PRESETS = [250, 500, 1000, 2000, 5000, 10000];
+    var WIDTH_PRESETS = [0, 30, 60, 90, 120, 360];
+
+    var $ = function (id) { return document.getElementById(id); };
+    var el = {
+        countBadge: $('countBadge'), listCount: $('listCount'),
+        listBtn: $('listBtn'), listPanel: $('listPanel'), searchPanel: $('searchPanel'),
+        sectorList: $('sectorList'), emptyState: $('emptyState'),
+        fitBtn: $('fitBtn'), exportBtn: $('exportBtn'), importBtn: $('importBtn'), importInput: $('importInput'), clearBtn: $('clearBtn'),
+        searchForm: $('searchForm'), searchInput: $('searchInput'), searchClear: $('searchClear'), searchHint: $('searchHint'),
+        coordHit: $('coordHit'), coordHitText: $('coordHitText'), searchResults: $('searchResults'),
+        zoomInBtn: $('zoomInBtn'), zoomOutBtn: $('zoomOutBtn'),
+        layerBtn: $('layerBtn'), layersPop: $('layersPop'), layerOptions: $('layerOptions'),
+        locateBtn: $('locateBtn'), hudBtn: $('hudBtn'), hudIcon: $('hudIcon'),
+        sheet: $('sheet'), grabber: $('grabber'), station: $('station'), pointText: $('pointText'),
+        copyPointBtn: $('copyPointBtn'), clearPointBtn: $('clearPointBtn'),
+        sectorForm: $('sectorForm'), azInput: $('azInput'), distInput: $('distInput'), widthInput: $('widthInput'),
+        azField: $('azField'), distField: $('distField'), widthField: $('widthField'),
+        dial: $('dial'), dialTicks: $('dialTicks'), dialWedge: $('dialWedge'), dialNeedle: $('dialNeedle'),
+        dialNeedleLine: $('dialNeedleLine'), dialNeedleTip: $('dialNeedleTip'), dialHub: $('dialHub'),
+        presets: $('presets'), nextSwatch: $('nextSwatch'), addBtn: $('addBtn'),
+        tileNotice: $('tileNotice'), toast: $('toast')
+    };
+
+    /* ================= Storage ================= */
+    function loadState() {
+        try {
+            var raw = localStorage.getItem(STORAGE_KEY);
+            return raw ? JSON.parse(raw) || {} : {};
+        } catch (e) {
+            return {};
+        }
+    }
+
+    function saveState() {
+        try {
+            var c = map.getCenter();
+            localStorage.setItem(STORAGE_KEY, JSON.stringify({
+                sectors: state.sectors,
+                colorSeq: state.colorSeq,
+                layer: state.layer,
+                compact: state.compact,
+                inputs: { az: el.azInput.value, dist: el.distInput.value, width: el.widthInput.value },
+                view: { center: [c.lat, c.lng], zoom: map.getZoom() }
+            }));
+        } catch (e) {
+            /* storage may be unavailable (private mode) — app still works in-memory */
+        }
+    }
+
+    /* ================= Math / formatting ================= */
+    function toRad(d) { return d * Math.PI / 180; }
+    function toDeg(r) { return r * 180 / Math.PI; }
+    function normAz(a) { return ((a % 360) + 360) % 360; }
+    function round(v, p) { var f = Math.pow(10, p == null ? 1 : p); return Math.round(v * f) / f; }
+    function isNum(v) { return typeof v === 'number' && isFinite(v); }
+    function pick(v, fallback) { return v === undefined || v === null || v === '' ? fallback : v; }
+
+    function destination(lat, lng, azimuth, distance) {
+        var d = distance / EARTH_R;
+        var p1 = toRad(lat);
+        var l1 = toRad(lng);
+        var t = toRad(azimuth);
+        var p2 = Math.asin(Math.sin(p1) * Math.cos(d) + Math.cos(p1) * Math.sin(d) * Math.cos(t));
+        var l2 = l1 + Math.atan2(Math.sin(t) * Math.sin(d) * Math.cos(p1), Math.cos(d) - Math.sin(p1) * Math.sin(p2));
+        return [toDeg(p2), ((toDeg(l2) + 540) % 360) - 180];
+    }
+
+    function sectorShape(s) {
+        var lat = s.origin[0], lng = s.origin[1];
+        var end = destination(lat, lng, s.az, s.dist);
+        if (s.width <= 0) return { polygon: null, end: end };
+        var full = s.width >= 360;
+        var span = full ? 360 : s.width;
+        var start = full ? 0 : s.az - span / 2;
+        var steps = Math.max(12, Math.ceil(span / 2));
+        var arc = [];
+        for (var i = 0; i <= steps; i++) arc.push(destination(lat, lng, start + span * i / steps, s.dist));
+        return { polygon: full ? arc : [s.origin].concat(arc), end: end };
+    }
+
+    function fmtLatLng(lat, lng) { return lat.toFixed(6) + ', ' + lng.toFixed(6); }
+    function fmtDeg(a) { return String(round(a, 1)).replace('.', ',') + '°'; }
+    function fmtDist(m) {
+        if (m >= 1000) return String(round(m / 1000, 2)).replace('.', ',') + ' км';
+        return Math.round(m) + ' м';
+    }
+    function fmtWidth(w) { return w <= 0 ? 'промінь' : w >= 360 ? 'коло' : fmtDeg(w); }
+
+    /* ================= Coordinate parser ================= */
+    function toNum(s) { return parseFloat(String(s).replace(',', '.')); }
+
+    function validLatLng(lat, lng) {
+        if (!isNum(lat) || !isNum(lng)) return null;
+        if (Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
+        return { lat: lat, lng: lng };
+    }
+
+    /**
+     * Accepts decimal pairs ("50.45, 30.52", "50,45 30,52"), DMS with symbols
+     * ("48°44'14.0\"N 37°35'13.3\"E"), hemisphere prefixes/suffixes ("N48 44 14 E37 35 13"),
+     * degrees + decimal minutes ("48°44.233' 37°35.221'") and bare DMS ("48 44 14 37 35 13").
+     */
+    function parseCoordinates(input) {
+        var s = String(input || '').trim().toUpperCase()
+            .replace(/[″”“]/g, '"')
+            .replace(/[′’‘`´]/g, "'")
+            .replace(/''/g, '"')
+            .replace(/[º˚]/g, '°');
+        if (!s) return null;
+
+        var pair = s.match(/^([-+]?\d{1,3}(?:[.,]\d+)?)\s*(?:[,;]\s*|\s+)([-+]?\d{1,3}(?:[.,]\d+)?)$/);
+        if (pair) return validLatLng(toNum(pair[1]), toNum(pair[2]));
+
+        var tokenRe = /([NSEW])|([-+]?\d+(?:[.,]\d+)?)\s*([°'"])?/g;
+        if (s.replace(tokenRe, '').replace(/[\s,;:]/g, '') !== '') return null;
+
+        var coords = [];
+        var cur = { parts: [], hemi: null };
+        function close() {
+            if (cur.parts.length) coords.push(cur);
+            cur = { parts: [], hemi: null };
+        }
+
+        tokenRe.lastIndex = 0;
+        for (var t = tokenRe.exec(s); t; t = tokenRe.exec(s)) {
+            if (t[1]) {
+                if (cur.parts.length && !cur.hemi) {
+                    cur.hemi = t[1];
+                    close();
+                } else {
+                    if (cur.parts.length) close();
+                    cur.hemi = t[1];
+                }
+                continue;
+            }
+            var value = toNum(t[2]);
+            var unit = t[3];
+            var slot = unit === '°' ? 0 : unit === "'" ? 1 : unit === '"' ? 2 : cur.parts.length;
+            if (cur.parts.length >= 3 || (cur.parts.length && slot < cur.parts.length)) {
+                close();
+                if (!unit) slot = 0;
+            }
+            cur.parts[slot] = value;
+        }
+        close();
+
+        if (coords.length !== 2) return null;
+
+        function toDecimal(c) {
+            var d = c.parts[0] || 0, m = c.parts[1] || 0, sec = c.parts[2] || 0;
+            if (m < 0 || m >= 60 || sec < 0 || sec >= 60) return NaN;
+            var v = Math.abs(d) + m / 60 + sec / 3600;
+            if (d < 0 || c.hemi === 'S' || c.hemi === 'W') v = -v;
+            return v;
+        }
+
+        var a = coords[0], b = coords[1];
+        if (a.hemi === 'E' || a.hemi === 'W' || b.hemi === 'N' || b.hemi === 'S') { var tmp = a; a = b; b = tmp; }
+        return validLatLng(toDecimal(a), toDecimal(b));
+    }
+
+    /* ================= State ================= */
+    var saved = loadState();
+
+    function validSector(s) {
+        return !!s && typeof s.id === 'string' && Array.isArray(s.origin)
+            && isNum(s.origin[0]) && isNum(s.origin[1]) && isNum(s.az) && isNum(s.dist) && isNum(s.width);
+    }
+
+    var state = {
+        sectors: Array.isArray(saved.sectors) ? saved.sectors.filter(validSector) : [],
+        colorSeq: isNum(saved.colorSeq) ? saved.colorSeq : 0,
+        layer: saved.layer || 'osm',
+        compact: !!saved.compact,
+        selected: null,
+        hud: true,
+        searchAbort: null
+    };
+
+    var savedInputs = saved.inputs || {};
+    el.azInput.value = pick(savedInputs.az, 60);
+    el.distInput.value = pick(savedInputs.dist, 500);
+    el.widthInput.value = pick(savedInputs.width, 60);
+
+    function nextColor() { return COLORS[state.colorSeq % COLORS.length]; }
+
+    /* ================= Map ================= */
+    var startView = saved.view && Array.isArray(saved.view.center)
+        && validLatLng(saved.view.center[0], saved.view.center[1]) && isNum(saved.view.zoom)
+        ? saved.view : DEFAULT_VIEW;
+
+    var map = L.map('map', {
+        zoomControl: false,
+        zoomSnap: 0.25,
+        zoomDelta: 0.5,
+        wheelPxPerZoomLevel: 90,
+        worldCopyJump: true
+    }).setView(startView.center, startView.zoom);
+
+    var LAYERS = {
+        osm: {
+            name: 'OpenStreetMap', note: 'Детальна схема', thumb: 'linear-gradient(135deg,#f2efe9 0 45%,#aad3df 45% 60%,#f2efe9 60%)',
+            layer: L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>',
+                minZoom: 2, maxZoom: 21, maxNativeZoom: 19
+            })
+        },
+        esri: {
+            name: 'Esri Вулиці', note: 'Спокійна схема', thumb: 'linear-gradient(135deg,#f5f1e4 0 50%,#fbd38d 50% 58%,#f5f1e4 58%)',
+            layer: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+                attribution: 'Тайли © Esri, HERE, Garmin, © OpenStreetMap',
+                minZoom: 2, maxZoom: 21, maxNativeZoom: 19
+            })
+        },
+        visicom: {
+            name: 'Візіком', note: 'Українська мапа', thumb: 'linear-gradient(135deg,#eef3e6 0 40%,#c9d9a8 40% 55%,#eef3e6 55%)',
+            layer: L.tileLayer('https://tms{s}.visicom.ua/2.0.0/planet3/base/{z}/{x}/{y}.png?lang=uk', {
+                attribution: 'Дані карт © АТ «<a href="https://api.visicom.ua/" target="_blank" rel="noopener">Візіком</a>»',
+                subdomains: '123', tms: true, minZoom: 2, maxZoom: 21, maxNativeZoom: 19
+            })
+        },
+        satellite: {
+            name: 'Супутник', note: 'Знімки Esri', thumb: 'linear-gradient(135deg,#3d4a2f 0 35%,#6b7a4a 35% 60%,#2b3524 60%)',
+            layer: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                attribution: 'Знімки © Esri, Maxar, Earthstar Geographics',
+                minZoom: 2, maxZoom: 21, maxNativeZoom: 19
+            })
+        }
+    };
+    var LAYER_ORDER = ['osm', 'esri', 'visicom', 'satellite'];
+    if (!LAYERS[state.layer]) state.layer = 'osm';
+
+    // Якщо джерело тайлів недоступне (блокування, ліміт, немає мережі) — автоматично перемикаємось на інше.
+    var tileStats = {};
+    var failedLayers = {};
+    LAYER_ORDER.forEach(function (key) {
+        tileStats[key] = { ok: 0, err: 0 };
+        LAYERS[key].layer.on('tileload', function () {
+            tileStats[key].ok++;
+            el.tileNotice.hidden = true;
+        });
+        LAYERS[key].layer.on('tileerror', function () {
+            var st = tileStats[key];
+            st.err++;
+            if (key !== state.layer || st.ok > 0 || st.err < 4 || failedLayers[key]) return;
+            failedLayers[key] = true;
+            var next = LAYER_ORDER.filter(function (k) { return !failedLayers[k]; })[0];
+            if (next) {
+                setLayer(next);
+                toast('Шар «' + LAYERS[key].name + '» недоступний — увімкнено «' + LAYERS[next].name + '»');
+            } else {
+                el.tileNotice.hidden = false;
+            }
+        });
+    });
+
+    function setLayer(key) {
+        if (map.hasLayer(LAYERS[state.layer].layer)) map.removeLayer(LAYERS[state.layer].layer);
+        state.layer = key;
+        tileStats[key].ok = 0;
+        tileStats[key].err = 0;
+        LAYERS[key].layer.addTo(map);
+        renderLayerOptions();
+        saveState();
+    }
+
+    LAYERS[state.layer].layer.addTo(map);
+
+    function retryTiles() {
+        failedLayers = {};
+        el.tileNotice.hidden = true;
+        setLayer(LAYER_ORDER[0]);
+    }
+    $('tileRetryBtn').addEventListener('click', retryTiles);
+    window.addEventListener('online', retryTiles);
+
+    L.control.scale({ imperial: false, position: 'bottomleft', maxWidth: 110 }).addTo(map);
+    map.attributionControl.setPrefix('<a href="https://leafletjs.com" target="_blank" rel="noopener">Leaflet</a>');
+
+    var sectorsLayer = L.layerGroup().addTo(map);
+    var previewLayer = L.layerGroup().addTo(map);
+    var pickMarker = null;
+    var locateCircle = null;
+
+    /* ================= UI helpers ================= */
+    var toastTimer = null;
+    function toast(text, action) {
+        clearTimeout(toastTimer);
+        el.toast.textContent = text;
+        el.toast.classList.toggle('with-action', !!action);
+        if (action) {
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.textContent = action.label;
+            btn.addEventListener('click', function () {
+                hideToast();
+                action.run();
+            });
+            el.toast.appendChild(btn);
+        }
+        el.toast.classList.add('show');
+        toastTimer = setTimeout(hideToast, action ? 5000 : 2600);
+    }
+    function hideToast() { el.toast.classList.remove('show'); }
+
+    function copyText(text) {
+        function fallback() {
+            var ta = document.createElement('textarea');
+            ta.value = text;
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.select();
+            try { document.execCommand('copy'); } catch (e) { /* ignore */ }
+            document.body.removeChild(ta);
+        }
+        try {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).catch(fallback);
+            } else {
+                fallback();
+            }
+        } catch (e) {
+            fallback();
+        }
+        toast('Скопійовано: ' + text);
+    }
+
+    var SVG_NS = 'http://www.w3.org/2000/svg';
+    function svgEl(tag, attrs) {
+        var n = document.createElementNS(SVG_NS, tag);
+        for (var k in attrs) n.setAttribute(k, attrs[k]);
+        return n;
+    }
+    function svgIcon(path, size, stroke) {
+        var svg = svgEl('svg', {
+            width: size || 15, height: size || 15, viewBox: '0 0 24 24', fill: 'none',
+            stroke: 'currentColor', 'stroke-width': stroke || 2.4, 'stroke-linecap': 'round', 'stroke-linejoin': 'round'
+        });
+        svg.appendChild(svgEl('path', { d: path }));
+        return svg;
+    }
+    var ICONS = {
+        copy: 'M8 8h12v12H8zM16 8V4H4v12h4',
+        trash: 'M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13',
+        pin: 'M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21zM12 12a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z'
+    };
+
+    // Wedge path in a dial-like coordinate system (0° = up, clockwise), centered at 0,0.
+    function wedgePath(az, width, r) {
+        if (width >= 360) return 'M' + (-r) + ',0a' + r + ',' + r + ' 0 1,0 ' + (2 * r) + ',0a' + r + ',' + r + ' 0 1,0 ' + (-2 * r) + ',0z';
+        if (width <= 0) return '';
+        var a1 = toRad(az - width / 2), a2 = toRad(az + width / 2);
+        var x1 = r * Math.sin(a1), y1 = -r * Math.cos(a1);
+        var x2 = r * Math.sin(a2), y2 = -r * Math.cos(a2);
+        return 'M0,0L' + x1.toFixed(2) + ',' + y1.toFixed(2) + 'A' + r + ',' + r + ' 0 ' + (width > 180 ? 1 : 0) + ',1 ' + x2.toFixed(2) + ',' + y2.toFixed(2) + 'Z';
+    }
+
+    function miniWedge(s) {
+        var svg = svgEl('svg', { width: 34, height: 34, viewBox: '-20 -20 40 40' });
+        svg.appendChild(svgEl('circle', { r: 17, fill: 'none', stroke: 'currentColor', 'stroke-opacity': 0.18, 'stroke-width': 1.5 }));
+        var d = wedgePath(s.az, s.width, 17);
+        if (d) svg.appendChild(svgEl('path', { d: d, fill: s.color, 'fill-opacity': 0.3, stroke: s.color, 'stroke-width': 1.5, 'stroke-linejoin': 'round' }));
+        var a = toRad(s.az);
+        svg.appendChild(svgEl('line', { x1: 0, y1: 0, x2: (17 * Math.sin(a)).toFixed(2), y2: (-17 * Math.cos(a)).toFixed(2), stroke: s.color, 'stroke-width': 2.5, 'stroke-linecap': 'round' }));
+        svg.appendChild(svgEl('circle', { r: 3, fill: s.color }));
+        return svg;
+    }
+
+    function updateSheetHeight() {
+        var h = state.hud ? Math.max(0, window.innerHeight - el.sheet.getBoundingClientRect().top) : 0;
+        if (window.innerWidth >= 760) h = 0;
+        document.documentElement.style.setProperty('--sheet-h', Math.round(h) + 'px');
+    }
+    if ('ResizeObserver' in window) new ResizeObserver(updateSheetHeight).observe(el.sheet);
+    window.addEventListener('resize', updateSheetHeight);
+
+    /* ================= Compass dial ================= */
+    (function buildDial() {
+        for (var deg = 0; deg < 360; deg += 5) {
+            var major = deg % 30 === 0;
+            var mid = deg % 10 === 0;
+            var r1 = 96, r2 = major ? 84 : mid ? 89 : 92;
+            var a = toRad(deg);
+            el.dialTicks.appendChild(svgEl('line', {
+                'class': 'tick' + (major ? ' major' : ''),
+                x1: (r1 * Math.sin(a)).toFixed(2), y1: (-r1 * Math.cos(a)).toFixed(2),
+                x2: (r2 * Math.sin(a)).toFixed(2), y2: (-r2 * Math.cos(a)).toFixed(2),
+                'stroke-width': major ? 2 : 1.2
+            }));
+        }
+        [['Пн', 0], ['Сх', 90], ['Пд', 180], ['Зх', 270]].forEach(function (c) {
+            var a = toRad(c[1]);
+            var t = svgEl('text', { 'class': 'cardinal' + (c[1] === 0 ? ' north' : ''), x: (71 * Math.sin(a)).toFixed(2), y: (-71 * Math.cos(a)).toFixed(2) });
+            t.textContent = c[0];
+            el.dialTicks.appendChild(t);
+        });
+    })();
+
+    function renderDial(v) {
+        var color = nextColor();
+        var az = v.az == null ? 0 : v.az;
+        el.dialNeedle.setAttribute('transform', 'rotate(' + az + ')');
+        el.dialNeedle.style.opacity = v.az == null ? 0.25 : 1;
+        el.dialNeedleLine.setAttribute('stroke', color);
+        el.dialNeedleTip.setAttribute('fill', color);
+        el.dialHub.setAttribute('stroke', color);
+        var w = v.width == null ? 0 : v.width;
+        el.dialWedge.setAttribute('d', v.az == null ? '' : wedgePath(az, w, 80));
+        el.dialWedge.setAttribute('fill', color);
+        el.dialWedge.setAttribute('stroke', color);
+        el.dial.setAttribute('aria-valuenow', String(Math.round(az)));
+        el.dial.setAttribute('aria-valuetext', fmtDeg(az));
+        el.nextSwatch.style.background = color;
+    }
+
+    function setAzimuth(az) {
+        el.azInput.value = String(round(normAz(az), 1)).replace(/\.0$/, '');
+        refreshForm();
+        saveSoon();
+    }
+
+    function dialAngle(e) {
+        var r = el.dial.getBoundingClientRect();
+        var x = e.clientX - (r.left + r.width / 2);
+        var y = e.clientY - (r.top + r.height / 2);
+        return normAz(Math.round(toDeg(Math.atan2(x, -y))));
+    }
+
+    var dialDrag = false;
+    el.dial.addEventListener('pointerdown', function (e) {
+        dialDrag = true;
+        el.dial.classList.add('dragging');
+        try { el.dial.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+        setAzimuth(dialAngle(e));
+        e.preventDefault();
+    });
+    el.dial.addEventListener('pointermove', function (e) {
+        if (dialDrag) setAzimuth(dialAngle(e));
+    });
+    function endDrag() {
+        dialDrag = false;
+        el.dial.classList.remove('dragging');
+    }
+    el.dial.addEventListener('pointerup', endDrag);
+    el.dial.addEventListener('pointercancel', endDrag);
+    el.dial.addEventListener('keydown', function (e) {
+        var cur = toNum(el.azInput.value);
+        if (!isNum(cur)) cur = 0;
+        var step = e.shiftKey ? 10 : 1;
+        if (e.key === 'ArrowRight' || e.key === 'ArrowUp') { setAzimuth(cur + step); e.preventDefault(); }
+        if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') { setAzimuth(cur - step); e.preventDefault(); }
+    });
+
+    /* ================= Presets ================= */
+    var presetButtons = [];
+
+    function buildPresets() {
+        function label(text) {
+            var l = document.createElement('span');
+            l.className = 'eyebrow';
+            l.textContent = text;
+            el.presets.appendChild(l);
+        }
+        function chip(text, input, value) {
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'chip num';
+            btn.textContent = text;
+            btn.addEventListener('click', function () {
+                input.value = value;
+                refreshForm();
+                saveSoon();
+            });
+            presetButtons.push({ btn: btn, input: input, value: value });
+            el.presets.appendChild(btn);
+        }
+        label('Дальність');
+        DIST_PRESETS.forEach(function (d) { chip(fmtDist(d), el.distInput, d); });
+        var sep = document.createElement('span');
+        sep.className = 'sep';
+        el.presets.appendChild(sep);
+        label('Ширина');
+        WIDTH_PRESETS.forEach(function (w) { chip(fmtWidth(w), el.widthInput, w); });
+    }
+
+    function renderPresets() {
+        presetButtons.forEach(function (p) {
+            p.btn.classList.toggle('on', toNum(p.input.value) === p.value);
+        });
+    }
+
+    function sizeInputs() {
+        [el.azInput, el.distInput, el.widthInput].forEach(function (input) {
+            input.style.width = (Math.max(1, input.value.length) + 0.3) + 'ch';
+        });
+    }
+
+    /* ================= Panels ================= */
+    function openPanel(name) {
+        el.listPanel.hidden = name !== 'list';
+        el.searchPanel.hidden = name !== 'search';
+        el.listBtn.setAttribute('aria-expanded', String(name === 'list'));
+        if (name) closeLayers();
+    }
+
+    function closePanels() {
+        openPanel(null);
+        if (state.searchAbort) state.searchAbort.abort();
+    }
+
+    el.listBtn.addEventListener('click', function () {
+        if (el.listPanel.hidden) openPanel('list'); else closePanels();
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-close]'), function (b) {
+        b.addEventListener('click', closePanels);
+    });
+
+    document.addEventListener('keydown', function (e) {
+        if (e.key !== 'Escape') return;
+        if (!el.layersPop.hidden) closeLayers();
+        else if (!el.listPanel.hidden || !el.searchPanel.hidden) {
+            closePanels();
+            el.searchInput.blur();
+        } else if (state.selected) clearSelection();
+    });
+
+    /* ================= Inputs ================= */
+    function readInputs() {
+        var azRaw = toNum(el.azInput.value);
+        var distRaw = toNum(el.distInput.value);
+        var widthRaw = el.widthInput.value.trim() === '' ? 0 : toNum(el.widthInput.value);
+
+        var azOk = isNum(azRaw);
+        var distOk = isNum(distRaw) && distRaw >= LIMITS.dist.min && distRaw <= LIMITS.dist.max;
+        var widthOk = isNum(widthRaw) && widthRaw >= LIMITS.width.min && widthRaw <= LIMITS.width.max;
+
+        el.azField.classList.toggle('invalid', el.azInput.value !== '' && !azOk);
+        el.distField.classList.toggle('invalid', el.distInput.value !== '' && !distOk);
+        el.widthField.classList.toggle('invalid', !widthOk);
+
+        return {
+            valid: azOk && distOk && widthOk,
+            az: azOk ? normAz(azRaw) : null,
+            dist: distOk ? distRaw : null,
+            width: widthOk ? widthRaw : null,
+            errors: { az: !azOk, dist: !distOk, width: !widthOk }
+        };
+    }
+
+    function refreshForm() {
+        var v = readInputs();
+        el.addBtn.disabled = !state.selected || !v.valid;
+        updatePickMarker(v);
+        renderPreview(v);
+        renderDial(v);
+        renderPresets();
+        sizeInputs();
+        return v;
+    }
+
+    var saveTimer = null;
+    function saveSoon() {
+        clearTimeout(saveTimer);
+        saveTimer = setTimeout(saveState, 300);
+    }
+
+    [el.azInput, el.distInput, el.widthInput].forEach(function (input) {
+        input.addEventListener('input', function () {
+            var clean = input.value.replace(input === el.azInput ? /[^0-9.,-]/g : /[^0-9.,]/g, '');
+            if (clean !== input.value) input.value = clean;
+            refreshForm();
+            saveSoon();
+        });
+        input.addEventListener('focus', function () { input.select(); });
+    });
+
+    el.azInput.addEventListener('change', function () {
+        var v = toNum(el.azInput.value);
+        if (isNum(v) && (v < 0 || v >= 360)) setAzimuth(v);
+    });
+
+    /* ================= Sheet compact mode ================= */
+    function applyCompact() {
+        el.sheet.classList.toggle('compact', state.compact);
+        el.grabber.setAttribute('aria-expanded', String(!state.compact));
+        updateSheetHeight();
+    }
+    el.grabber.addEventListener('click', function () {
+        state.compact = !state.compact;
+        applyCompact();
+        saveState();
+    });
+    (function swipeGrabber() {
+        var startY = null;
+        el.sheet.addEventListener('touchstart', function (e) {
+            var t = e.target;
+            if (t === el.grabber || t === el.station || el.station.contains(t)) startY = e.touches[0].clientY;
+            else startY = null;
+        }, { passive: true });
+        el.sheet.addEventListener('touchend', function (e) {
+            if (startY == null) return;
+            var dy = e.changedTouches[0].clientY - startY;
+            if (Math.abs(dy) > 30) {
+                state.compact = dy > 0;
+                applyCompact();
+                saveState();
+            }
+            startY = null;
+        }, { passive: true });
+    })();
+
+    /* ================= Point selection ================= */
+    function pickIconHtml(az, color) {
+        return '<div class="pick" style="--pick-color:' + color + '">' +
+            '<div class="pick-pulse"></div>' +
+            '<div class="pick-needle" style="transform: rotate(' + (az == null ? 0 : az) + 'deg)"' + (az == null ? ' hidden' : '') + '></div>' +
+            '<div class="pick-dot"></div>' +
+            '<div class="pick-bubble">' + (az == null ? '—' : fmtDeg(az)) + '</div>' +
+            '</div>';
+    }
+
+    function updatePickMarker(v) {
+        if (!pickMarker) return;
+        var root = pickMarker.getElement();
+        if (!root) return;
+        var pickEl = root.querySelector('.pick');
+        var needle = root.querySelector('.pick-needle');
+        var bubble = root.querySelector('.pick-bubble');
+        pickEl.style.setProperty('--pick-color', nextColor());
+        if (v.az == null) {
+            needle.hidden = true;
+            bubble.textContent = '—';
+        } else {
+            needle.hidden = false;
+            needle.style.transform = 'rotate(' + v.az + 'deg)';
+            bubble.textContent = fmtDeg(v.az);
+        }
+    }
+
+    function selectPoint(latlng) {
+        var lat = latlng.lat;
+        var lng = L.Util.wrapNum(latlng.lng, [-180, 180], true);
+        state.selected = { lat: lat, lng: lng };
+
+        el.station.classList.add('has-point');
+        el.pointText.textContent = fmtLatLng(lat, lng);
+        el.copyPointBtn.hidden = false;
+        el.clearPointBtn.hidden = false;
+
+        if (pickMarker) {
+            pickMarker.setLatLng([lat, lng]);
+        } else {
+            var v = readInputs();
+            pickMarker = L.marker([lat, lng], {
+                draggable: true,
+                autoPan: true,
+                keyboard: false,
+                zIndexOffset: 1000,
+                icon: L.divIcon({ className: 'pick-icon', html: pickIconHtml(v.az, nextColor()), iconSize: [72, 72], iconAnchor: [36, 36] })
+            }).addTo(map);
+            pickMarker.on('drag', function (e) {
+                var p = e.target.getLatLng();
+                state.selected = { lat: p.lat, lng: L.Util.wrapNum(p.lng, [-180, 180], true) };
+                el.pointText.textContent = fmtLatLng(state.selected.lat, state.selected.lng);
+                renderPreview(readInputs());
+            });
+        }
+        refreshForm();
+    }
+
+    function clearSelection() {
+        state.selected = null;
+        if (pickMarker) {
+            map.removeLayer(pickMarker);
+            pickMarker = null;
+        }
+        previewLayer.clearLayers();
+        el.station.classList.remove('has-point');
+        el.pointText.textContent = 'Торкніться мапи, щоб обрати точку';
+        el.copyPointBtn.hidden = true;
+        el.clearPointBtn.hidden = true;
+        el.addBtn.disabled = true;
+    }
+
+    map.on('click', function (e) {
+        if (!el.listPanel.hidden || !el.searchPanel.hidden || !el.layersPop.hidden) {
+            closePanels();
+            closeLayers();
+            el.searchInput.blur();
+            return;
+        }
+        selectPoint(e.latlng);
+    });
+
+    el.clearPointBtn.addEventListener('click', clearSelection);
+    el.copyPointBtn.addEventListener('click', function () {
+        if (state.selected) copyText(fmtLatLng(state.selected.lat, state.selected.lng));
+    });
+
+    /* ================= Preview ================= */
+    function renderPreview(v) {
+        previewLayer.clearLayers();
+        if (!state.selected || !v.valid) return;
+        var color = nextColor();
+        var s = { origin: [state.selected.lat, state.selected.lng], az: v.az, dist: v.dist, width: v.width };
+        var shape = sectorShape(s);
+        if (shape.polygon) {
+            L.polygon(shape.polygon, {
+                color: color, weight: 2, dashArray: '6 7', fillColor: color, fillOpacity: 0.12, interactive: false
+            }).addTo(previewLayer);
+        }
+        L.polyline([s.origin, shape.end], { color: color, weight: 3, opacity: 0.9, interactive: false }).addTo(previewLayer);
+    }
+
+    /* ================= Sectors ================= */
+    function newId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+
+    function addSector() {
+        var v = refreshForm();
+        if (!state.selected) {
+            toast('Спочатку оберіть точку на мапі');
+            return;
+        }
+        if (!v.valid) {
+            if (v.errors.az) toast('Вкажіть азимут від 0 до 359°');
+            else if (v.errors.dist) toast('Дальність має бути від ' + LIMITS.dist.min + ' до ' + LIMITS.dist.max + ' м');
+            else toast('Ширина сектора має бути від 0 до 360°');
+            return;
+        }
+        var sector = {
+            id: newId(),
+            origin: [round(state.selected.lat, 7), round(state.selected.lng, 7)],
+            az: round(v.az, 2),
+            dist: round(v.dist, 1),
+            width: round(v.width, 2),
+            color: nextColor(),
+            created: Date.now()
+        };
+        state.colorSeq++;
+        state.sectors.push(sector);
+        renderSectors();
+        refreshForm();
+        saveState();
+        toast('Сектор ' + fmtDeg(sector.az) + ' · ' + fmtDist(sector.dist) + ' додано');
+    }
+
+    el.sectorForm.addEventListener('submit', function (e) {
+        e.preventDefault();
+        if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+        addSector();
+    });
+
+    function removeSector(id) {
+        var idx = -1;
+        state.sectors.forEach(function (s, i) { if (s.id === id) idx = i; });
+        if (idx < 0) return;
+        var removed = state.sectors.splice(idx, 1)[0];
+        renderSectors();
+        saveState();
+        toast('Сектор ' + fmtDeg(removed.az) + ' видалено', {
+            label: 'Повернути',
+            run: function () {
+                state.sectors.splice(Math.min(idx, state.sectors.length), 0, removed);
+                renderSectors();
+                saveState();
+            }
+        });
+    }
+
+    function clearAll() {
+        if (!state.sectors.length) return;
+        var backup = state.sectors.slice();
+        state.sectors = [];
+        renderSectors();
+        saveState();
+        toast('Видалено секторів: ' + backup.length, {
+            label: 'Повернути',
+            run: function () {
+                state.sectors = backup.concat(state.sectors);
+                renderSectors();
+                saveState();
+            }
+        });
+    }
+
+    function sectorBounds(list) {
+        var bounds = L.latLngBounds([]);
+        list.forEach(function (s) {
+            var shape = sectorShape(s);
+            bounds.extend(s.origin);
+            bounds.extend(shape.end);
+            if (shape.polygon) shape.polygon.forEach(function (p) { bounds.extend(p); });
+        });
+        return bounds;
+    }
+
+    function fitOptions() {
+        var wide = window.innerWidth >= 760 && state.hud;
+        var sheetH = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sheet-h')) || 0;
+        return {
+            paddingTopLeft: [wide ? 480 : 30, 90],
+            paddingBottomRight: [76, (state.hud ? sheetH : 0) + 30],
+            maxZoom: 18,
+            duration: 0.6
+        };
+    }
+
+    function focusSector(id) {
+        var s = state.sectors.filter(function (x) { return x.id === id; })[0];
+        if (!s) return;
+        closePanels();
+        map.flyToBounds(sectorBounds([s]), fitOptions());
+    }
+
+    function fitAll() {
+        if (!state.sectors.length) {
+            toast('Секторів ще немає');
+            return;
+        }
+        closePanels();
+        map.flyToBounds(sectorBounds(state.sectors), fitOptions());
+    }
+
+    function renderSectors() {
+        sectorsLayer.clearLayers();
+
+        state.sectors.forEach(function (s) {
+            var shape = sectorShape(s);
+            if (shape.polygon) {
+                L.polygon(shape.polygon, {
+                    color: s.color, weight: 2, opacity: 0.95,
+                    fillColor: s.color, fillOpacity: 0.16,
+                    lineJoin: 'round', interactive: false
+                }).addTo(sectorsLayer);
+            }
+            L.polyline([s.origin, shape.end], {
+                color: s.color, weight: 2.5, dashArray: '1 7', lineCap: 'round', interactive: false
+            }).addTo(sectorsLayer);
+
+            L.marker(shape.end, {
+                interactive: false,
+                keyboard: false,
+                icon: L.divIcon({
+                    className: 'label-icon',
+                    iconSize: [0, 0],
+                    html: '<div class="map-label"><i style="background:' + s.color + '"></i>' + fmtDeg(s.az) + ' · ' + fmtDist(s.dist) + '</div>'
+                })
+            }).addTo(sectorsLayer);
+
+            var origin = L.circleMarker(s.origin, {
+                radius: 7, color: '#ffffff', weight: 3,
+                fillColor: s.color, fillOpacity: 1,
+                bubblingMouseEvents: false
+            }).addTo(sectorsLayer);
+            origin.bindTooltip('Обрати цю станцію', { direction: 'top', offset: [0, -8] });
+            origin.on('click', function () {
+                selectPoint(L.latLng(s.origin[0], s.origin[1]));
+                toast('Станцію обрано — додайте ще один сектор');
+            });
+        });
+
+        renderList();
+    }
+
+    function renderList() {
+        var n = state.sectors.length;
+        el.countBadge.textContent = n;
+        el.listCount.textContent = n;
+        el.emptyState.hidden = n > 0;
+        el.fitBtn.disabled = el.exportBtn.disabled = el.clearBtn.disabled = n === 0;
+        el.sectorList.textContent = '';
+
+        state.sectors.slice().reverse().forEach(function (s) {
+            var li = document.createElement('li');
+            li.className = 'sector-item';
+            li.tabIndex = 0;
+
+            var icon = document.createElement('div');
+            icon.className = 'wedge-icon';
+            icon.style.color = 'var(--ink)';
+            icon.appendChild(miniWedge(s));
+
+            var main = document.createElement('div');
+            main.className = 'sector-main';
+            var title = document.createElement('div');
+            title.className = 'sector-title';
+            var azEl = document.createElement('b');
+            azEl.className = 'num';
+            azEl.textContent = fmtDeg(s.az);
+            var meta = document.createElement('span');
+            meta.textContent = fmtDist(s.dist) + ' · ' + fmtWidth(s.width);
+            title.appendChild(azEl);
+            title.appendChild(meta);
+            var sub = document.createElement('div');
+            sub.className = 'sector-sub';
+            sub.textContent = fmtLatLng(s.origin[0], s.origin[1]);
+            main.appendChild(title);
+            main.appendChild(sub);
+
+            var actions = document.createElement('div');
+            actions.className = 'sector-actions';
+
+            var copyBtn = document.createElement('button');
+            copyBtn.className = 'round-btn solid';
+            copyBtn.type = 'button';
+            copyBtn.title = 'Копіювати координати кінцевої точки';
+            copyBtn.setAttribute('aria-label', copyBtn.title);
+            copyBtn.appendChild(svgIcon(ICONS.copy));
+            copyBtn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                var end = sectorShape(s).end;
+                copyText(fmtLatLng(end[0], end[1]));
+            });
+
+            var delBtn = document.createElement('button');
+            delBtn.className = 'round-btn danger';
+            delBtn.type = 'button';
+            delBtn.title = 'Видалити сектор';
+            delBtn.setAttribute('aria-label', delBtn.title);
+            delBtn.appendChild(svgIcon(ICONS.trash));
+            delBtn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                removeSector(s.id);
+            });
+
+            actions.appendChild(copyBtn);
+            actions.appendChild(delBtn);
+            li.appendChild(icon);
+            li.appendChild(main);
+            li.appendChild(actions);
+            li.addEventListener('click', function () { focusSector(s.id); });
+            li.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') focusSector(s.id);
+                if (e.key === 'Delete') removeSector(s.id);
+            });
+            el.sectorList.appendChild(li);
+        });
+    }
+
+    el.fitBtn.addEventListener('click', fitAll);
+    el.clearBtn.addEventListener('click', clearAll);
+
+    /* ================= Import / export ================= */
+    function exportGeoJSON() {
+        if (!state.sectors.length) return;
+        var features = state.sectors.map(function (s) {
+            var shape = sectorShape(s);
+            var end = shape.end;
+            var geometry = shape.polygon
+                ? { type: 'Polygon', coordinates: [shape.polygon.concat([shape.polygon[0]]).map(function (p) { return [round(p[1], 7), round(p[0], 7)]; })] }
+                : { type: 'LineString', coordinates: [[s.origin[1], s.origin[0]], [round(end[1], 7), round(end[0], 7)]] };
+            return {
+                type: 'Feature',
+                properties: {
+                    id: s.id, azimuth: s.az, distance: s.dist, width: s.width, color: s.color,
+                    origin_lat: s.origin[0], origin_lng: s.origin[1],
+                    end_lat: round(end[0], 7), end_lng: round(end[1], 7)
+                },
+                geometry: geometry
+            };
+        });
+        var blob = new Blob([JSON.stringify({ type: 'FeatureCollection', features: features }, null, 2)], { type: 'application/geo+json' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        var stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
+        a.href = url;
+        a.download = 'azimuth-sectors-' + stamp + '.geojson';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+        toast('Експортовано секторів: ' + state.sectors.length);
+    }
+
+    function importData(json) {
+        var items = Array.isArray(json) ? json
+            : json && Array.isArray(json.features) ? json.features.map(function (f) { return f.properties || {}; })
+            : json && Array.isArray(json.sectors) ? json.sectors
+            : [];
+        var added = 0;
+        items.forEach(function (p) {
+            var origin = Array.isArray(p.origin) ? p.origin.map(Number) : [Number(p.origin_lat), Number(p.origin_lng)];
+            var s = {
+                id: newId(),
+                origin: origin,
+                az: normAz(Number(pick(p.az, p.azimuth))),
+                dist: Number(pick(p.dist, p.distance)),
+                width: Number(pick(p.width, 0)),
+                color: /^#[0-9a-f]{3,8}$/i.test(p.color || '') ? p.color : nextColor(),
+                created: Date.now()
+            };
+            if (validSector(s) && validLatLng(s.origin[0], s.origin[1]) && s.dist > 0 && s.width >= 0 && s.width <= 360) {
+                state.colorSeq++;
+                state.sectors.push(s);
+                added++;
+            }
+        });
+        if (!added) {
+            toast('У файлі немає секторів');
+            return;
+        }
+        renderSectors();
+        refreshForm();
+        saveState();
+        fitAll();
+        toast('Імпортовано секторів: ' + added);
+    }
+
+    el.exportBtn.addEventListener('click', exportGeoJSON);
+    el.importBtn.addEventListener('click', function () { el.importInput.click(); });
+    el.importInput.addEventListener('change', function () {
+        var file = el.importInput.files && el.importInput.files[0];
+        el.importInput.value = '';
+        if (!file) return;
+        var reader = new FileReader();
+        reader.onload = function () {
+            try {
+                importData(JSON.parse(reader.result));
+            } catch (e) {
+                toast('Файл не схожий на GeoJSON із секторами');
+            }
+        };
+        reader.onerror = function () { toast('Не вдалося прочитати файл'); };
+        reader.readAsText(file);
+    });
+
+    /* ================= Search ================= */
+    function goTo(lat, lng, zoom) {
+        closePanels();
+        el.searchInput.blur();
+        map.flyTo([lat, lng], Math.max(map.getZoom(), zoom || 17), { duration: 0.8 });
+        selectPoint(L.latLng(lat, lng));
+    }
+
+    function updateSearchUi() {
+        var q = el.searchInput.value;
+        el.searchClear.hidden = !q;
+        $('searchSubmit').hidden = !q;
+        var c = parseCoordinates(q);
+        el.coordHit.hidden = !c;
+        if (c) el.coordHitText.textContent = fmtLatLng(c.lat, c.lng);
+        el.searchHint.hidden = !!q;
+        if (!q) el.searchResults.textContent = '';
+    }
+
+    el.searchInput.addEventListener('focus', function () {
+        openPanel('search');
+        updateSearchUi();
+    });
+    el.searchInput.addEventListener('input', updateSearchUi);
+    el.searchInput.addEventListener('search', updateSearchUi);
+    el.searchClear.addEventListener('click', function () {
+        el.searchInput.value = '';
+        updateSearchUi();
+        el.searchInput.focus();
+    });
+    el.coordHit.addEventListener('click', function () {
+        var c = parseCoordinates(el.searchInput.value);
+        if (c) goTo(c.lat, c.lng);
+    });
+
+    function setResultsStatus(html) {
+        el.searchResults.innerHTML = '<li class="status-line">' + html + '</li>';
+    }
+
+    function resultTitle(r) {
+        var a = r.address || {};
+        var street = a.road || a.pedestrian || a.footway || a.square || a.neighbourhood;
+        if (street) return { title: street, house: a.house_number || '' };
+        return { title: r.name || (r.display_name || '').split(',')[0], house: a.house_number || '' };
+    }
+
+    function runSearch() {
+        var q = el.searchInput.value.trim();
+        openPanel('search');
+        if (!q) {
+            el.searchInput.focus();
+            return;
+        }
+        var c = parseCoordinates(q);
+        if (c) {
+            goTo(c.lat, c.lng);
+            toast('Перехід до ' + fmtLatLng(c.lat, c.lng));
+            return;
+        }
+        if (q.length < 3) {
+            setResultsStatus('Введіть щонайменше 3 символи');
+            return;
+        }
+
+        if (state.searchAbort) state.searchAbort.abort();
+        var ctrl = typeof AbortController === 'function' ? new AbortController() : null;
+        state.searchAbort = ctrl;
+        setResultsStatus('<span class="spinner"></span>Шукаємо…');
+
+        var b = map.getBounds().pad(2);
+        var params = [
+            ['q', q], ['format', 'jsonv2'], ['addressdetails', '1'], ['limit', '10'],
+            ['accept-language', 'uk'], ['countrycodes', 'ua'],
+            ['viewbox', [b.getWest(), b.getNorth(), b.getEast(), b.getSouth()].join(',')], ['bounded', '0']
+        ].map(function (p) { return p[0] + '=' + encodeURIComponent(p[1]); }).join('&');
+
+        fetch('https://nominatim.openstreetmap.org/search?' + params, {
+            signal: ctrl ? ctrl.signal : undefined,
+            headers: { Accept: 'application/json' }
+        }).then(function (res) {
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            return res.json();
+        }).then(function (data) {
+            if (ctrl && ctrl.signal.aborted) return;
+            renderResults(data);
+        }).catch(function (err) {
+            if (err && err.name === 'AbortError') return;
+            setResultsStatus('Не вдалося виконати пошук. Перевірте з’єднання й спробуйте ще раз');
+        }).then(function () {
+            if (state.searchAbort === ctrl) state.searchAbort = null;
+        });
+    }
+
+    function renderResults(data) {
+        el.searchResults.textContent = '';
+        if (!Array.isArray(data) || !data.length) {
+            setResultsStatus('Нічого не знайдено. Спробуйте уточнити місто чи номер будинку');
+            return;
+        }
+        var seen = {};
+        data.forEach(function (r) {
+            var lat = parseFloat(r.lat);
+            var lng = parseFloat(r.lon);
+            if (!isNum(lat) || !isNum(lng)) return;
+            var key = lat.toFixed(4) + ',' + lng.toFixed(4);
+            if (seen[key]) return;
+            seen[key] = true;
+            var t = resultTitle(r);
+
+            var li = document.createElement('li');
+            li.className = 'result';
+            li.tabIndex = 0;
+
+            var icon = document.createElement('div');
+            icon.className = 'result-icon';
+            icon.appendChild(svgIcon(ICONS.pin, 17, 2.2));
+
+            var body = document.createElement('div');
+            var main = document.createElement('div');
+            main.className = 'result-main';
+            main.textContent = t.title;
+            if (t.house) {
+                var badge = document.createElement('span');
+                badge.className = 'house';
+                badge.textContent = t.house;
+                main.appendChild(badge);
+            }
+            var sub = document.createElement('div');
+            sub.className = 'result-sub';
+            sub.textContent = r.display_name || '';
+            body.appendChild(main);
+            body.appendChild(sub);
+
+            li.appendChild(icon);
+            li.appendChild(body);
+            var go = function () { goTo(lat, lng, t.house ? 18 : 16); };
+            li.addEventListener('click', go);
+            li.addEventListener('keydown', function (e) { if (e.key === 'Enter') go(); });
+            el.searchResults.appendChild(li);
+        });
+    }
+
+    el.searchForm.addEventListener('submit', function (e) {
+        e.preventDefault();
+        runSearch();
+    });
+
+    /* ================= Map controls ================= */
+    el.zoomInBtn.addEventListener('click', function () { map.zoomIn(1); });
+    el.zoomOutBtn.addEventListener('click', function () { map.zoomOut(1); });
+
+    function renderLayerOptions() {
+        el.layerOptions.textContent = '';
+        LAYER_ORDER.forEach(function (key) {
+            var info = LAYERS[key];
+            var b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'layer-opt';
+            b.setAttribute('role', 'radio');
+            b.setAttribute('aria-checked', String(key === state.layer));
+            var thumb = document.createElement('span');
+            thumb.className = 'layer-thumb';
+            thumb.style.background = info.thumb;
+            var text = document.createElement('span');
+            text.textContent = info.name;
+            var note = document.createElement('small');
+            note.textContent = info.note;
+            text.appendChild(note);
+            b.appendChild(thumb);
+            b.appendChild(text);
+            b.addEventListener('click', function () {
+                failedLayers = {};
+                setLayer(key);
+                closeLayers();
+            });
+            el.layerOptions.appendChild(b);
+        });
+    }
+
+    function closeLayers() {
+        el.layersPop.hidden = true;
+        el.layerBtn.setAttribute('aria-expanded', 'false');
+    }
+
+    el.layerBtn.addEventListener('click', function () {
+        var open = el.layersPop.hidden;
+        if (open) {
+            closePanels();
+            renderLayerOptions();
+        }
+        el.layersPop.hidden = !open;
+        el.layerBtn.setAttribute('aria-expanded', String(open));
+    });
+
+    el.locateBtn.addEventListener('click', function () {
+        if (!('geolocation' in navigator)) {
+            toast('Цей браузер не підтримує геолокацію');
+            return;
+        }
+        el.locateBtn.classList.add('busy');
+        navigator.geolocation.getCurrentPosition(function (pos) {
+            el.locateBtn.classList.remove('busy');
+            el.locateBtn.classList.add('active');
+            var lat = pos.coords.latitude, lng = pos.coords.longitude, accuracy = pos.coords.accuracy;
+            if (locateCircle) map.removeLayer(locateCircle);
+            locateCircle = L.circle([lat, lng], {
+                radius: accuracy, color: '#2f6bff', weight: 1, fillOpacity: 0.08, interactive: false
+            }).addTo(map);
+            map.flyTo([lat, lng], Math.max(map.getZoom(), 17), { duration: 0.8 });
+            selectPoint(L.latLng(lat, lng));
+            toast('Ви тут · точність ±' + Math.round(accuracy) + ' м');
+        }, function (err) {
+            el.locateBtn.classList.remove('busy');
+            toast(err.code === 1 ? 'Дозвольте доступ до геолокації в налаштуваннях браузера' : 'Не вдалося визначити місцезнаходження');
+        }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 });
+    });
+
+    var EYE = '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>';
+    var EYE_OFF = '<path d="M3 3l18 18"/><path d="M10.6 5.1A10.4 10.4 0 0 1 12 5c6.5 0 10 7 10 7a17 17 0 0 1-3.2 4.2M6.6 6.6C3.8 8.4 2 12 2 12s3.5 7 10 7c1.9 0 3.5-.5 4.9-1.3"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/>';
+
+    el.hudBtn.addEventListener('click', function () {
+        state.hud = !state.hud;
+        document.body.classList.toggle('hud-hidden', !state.hud);
+        el.hudBtn.setAttribute('aria-pressed', String(!state.hud));
+        el.hudBtn.setAttribute('aria-label', state.hud ? 'Сховати інтерфейс' : 'Показати інтерфейс');
+        el.hudIcon.innerHTML = state.hud ? EYE : EYE_OFF;
+        if (!state.hud) {
+            closePanels();
+            closeLayers();
+        }
+        updateSheetHeight();
+    });
+
+    map.on('moveend', saveSoon);
+
+    /* ================= Init ================= */
+    buildPresets();
+    applyCompact();
+    renderSectors();
+    renderLayerOptions();
+    refreshForm();
+    updateSheetHeight();
+
+    // Exposed for debugging / tests.
+    window.AzimuthMap = { parseCoordinates: parseCoordinates, destination: destination, sectorShape: sectorShape, state: state };
+})();
+</script>
+</body>
+</html>
