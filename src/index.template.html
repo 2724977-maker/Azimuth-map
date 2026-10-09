@@ -1318,6 +1318,55 @@
 
     LAYERS[state.layer].layer.addTo(map);
 
+    // Visicom не відмовляє у тайлах, коли ключ не прийнято, а віддає їх затемненими з написом
+    // «Порушені умови…». Такі тайли помітно темніші: біле тло 254 стає ~152. Перевіряємо кілька
+    // детальних тайлів і, якщо Visicom заблокував доступ, перемикаємось на робочу мапу.
+    var visicomCheck = { samples: 0, bad: 0, done: false, manual: false, restricted: false };
+
+    function tileBrightness(img) {
+        try {
+            var c = document.createElement('canvas');
+            c.width = c.height = 24;
+            var g = c.getContext('2d');
+            g.drawImage(img, 0, 0, 24, 24);
+            var d = g.getImageData(0, 0, 24, 24).data;
+            var sum = 0;
+            for (var i = 0; i < d.length; i += 4) sum += Math.max(d[i], d[i + 1], d[i + 2]);
+            return sum / (d.length / 4);
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function resetVisicomCheck() {
+        visicomCheck = { samples: 0, bad: 0, done: false, manual: false, restricted: false };
+    }
+
+    LAYERS.visicom.layer.on('tileload', function (e) {
+        if (visicomCheck.done || !e.coords || e.coords.z < 13) return;
+        var v = tileBrightness(e.tile);
+        if (v == null) return;
+        visicomCheck.samples++;
+        if (v < 175) visicomCheck.bad++;
+        if (visicomCheck.samples < 4) return;
+        visicomCheck.done = true;
+        // Перемикаємо шар після обробки події, щоб Leaflet не втратив поточний тайл.
+        if (visicomCheck.bad >= 3) setTimeout(onVisicomRestricted, 0);
+    });
+
+    function onVisicomRestricted() {
+        visicomCheck.restricted = true;
+        if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+            navigator.serviceWorker.controller.postMessage({ type: 'purge-visicom' });
+        }
+        if (state.layer === 'visicom' && !visicomCheck.manual) {
+            setLayer('osm');
+            toast('Visicom не прийняв ключ і показує напис про обмеження — увімкнено OpenStreetMap');
+        }
+        renderLayerOptions();
+        renderVisicomKey();
+    }
+
     function retryTiles() {
         failedLayers = {};
         el.tileNotice.hidden = true;
@@ -2243,14 +2292,20 @@
             var text = document.createElement('span');
             text.textContent = info.name;
             var note = document.createElement('small');
-            note.textContent = key === 'visicom' ? (state.visicomKey ? 'Ключ додано' : 'Потрібен API-ключ') : info.note;
+            note.textContent = key !== 'visicom' ? info.note
+                : visicomCheck.restricted ? 'Visicom не прийняв ключ'
+                : state.visicomKey ? 'Ключ додано' : 'Потрібен API-ключ';
             text.appendChild(note);
             b.appendChild(thumb);
             b.appendChild(text);
             b.addEventListener('click', function () {
                 failedLayers = {};
+                if (key === 'visicom' && visicomCheck.restricted) {
+                    visicomCheck.manual = true;
+                    toast('Visicom ще не прийняв ключ, тому на мапі буде напис про обмеження');
+                }
                 setLayer(key);
-                if (key === 'visicom' && !state.visicomKey) {
+                if (key === 'visicom' && (!state.visicomKey || visicomCheck.restricted)) {
                     el.visicomKeyInput.focus();
                     el.visicomKeyInput.scrollIntoView({ block: 'nearest' });
                     return;
@@ -2265,8 +2320,17 @@
         el.visicomKeyInput.value = state.visicomKey || '';
         var note = el.visicomKeyNote;
         note.textContent = '';
-        note.classList.toggle('ok', !!state.visicomKey);
-        if (state.visicomKey && state.visicomKey === VISICOM_KEY) {
+        note.classList.toggle('ok', !!state.visicomKey && !visicomCheck.restricted);
+        if (visicomCheck.restricted) {
+            note.appendChild(document.createTextNode('Visicom не приймає цей ключ: мапа приходить із написом про обмеження. Перевірте в кабінеті '));
+            var cab = document.createElement('a');
+            cab.href = 'https://api.visicom.ua/accounts/login';
+            cab.target = '_blank';
+            cab.rel = 'noopener';
+            cab.textContent = 'api.visicom.ua';
+            note.appendChild(cab);
+            note.appendChild(document.createTextNode(', що ключ активний і призначений для Visicom Tiles, а домен ' + (location.hostname || 'сайту') + ' додано до Referer.'));
+        } else if (state.visicomKey && state.visicomKey === VISICOM_KEY) {
             note.appendChild(document.createTextNode('Використовується ключ сайту. Щоб замінити його своїм, вставте інший ключ.'));
         } else if (state.visicomKey) {
             note.appendChild(document.createTextNode('Ключ збережено на цьому пристрої. '));
@@ -2289,6 +2353,7 @@
 
     function setVisicomKey(key) {
         state.visicomKey = key || VISICOM_KEY;
+        resetVisicomCheck();
         LAYERS.visicom.layer.setUrl(visicomUrl(state.visicomKey));
         tileStats.visicom.ok = 0;
         tileStats.visicom.err = 0;
@@ -2389,7 +2454,7 @@
     updateSheetHeight();
 
     // Exposed for debugging / tests.
-    window.AzimuthMap = { parseCoordinates: parseCoordinates, destination: destination, sectorShape: sectorShape, state: state };
+    window.AzimuthMap = { parseCoordinates: parseCoordinates, destination: destination, sectorShape: sectorShape, state: state, visicomCheck: function () { return visicomCheck; } };
 })();
 </script>
 </body>

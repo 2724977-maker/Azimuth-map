@@ -3,7 +3,7 @@
 
 var VERSION = '__BUILD__';
 var SHELL_CACHE = 'azimuth-shell-' + VERSION;
-var TILE_CACHE = 'azimuth-tiles-v1';
+var TILE_CACHE = 'azimuth-tiles-v2';
 var FONT_CACHE = 'azimuth-fonts-v1';
 var TILE_MAX_ENTRIES = 3000;
 var TILE_MAX_AGE = 7 * 24 * 60 * 60 * 1000;
@@ -33,10 +33,23 @@ self.addEventListener('activate', function (event) {
     event.waitUntil(
         caches.keys().then(function (keys) {
             return Promise.all(keys.filter(function (k) {
-                return k.indexOf('azimuth-shell-') === 0 && k !== SHELL_CACHE;
+                // Старі кеші застосунку й тайлів (серед них могли бути тайли Visicom із написом).
+                return (k.indexOf('azimuth-shell-') === 0 && k !== SHELL_CACHE)
+                    || (k.indexOf('azimuth-tiles-') === 0 && k !== TILE_CACHE);
             }).map(function (k) { return caches.delete(k); }));
         }).then(function () { return self.clients.claim(); })
     );
+});
+
+// Застосунок просить прибрати тайли Visicom із написом про обмеження, щоб вони не лишались у кеші.
+self.addEventListener('message', function (event) {
+    if (!event.data || event.data.type !== 'purge-visicom') return;
+    event.waitUntil(caches.open(TILE_CACHE).then(function (cache) {
+        return cache.keys().then(function (keys) {
+            return Promise.all(keys.filter(function (k) { return /visicom\.ua/.test(k.url); })
+                .map(function (k) { return cache.delete(k); }));
+        });
+    }));
 });
 
 self.addEventListener('fetch', function (event) {
