@@ -1036,7 +1036,9 @@
     var STORAGE_KEY = 'azimuth-map:v2';
     // API-ключ Visicom Tiles (https://api.visicom.ua). Якщо вписати його сюди, мапа Візіком
     // працюватиме без напису про обмеження для всіх. Інакше ключ можна ввести в меню шарів.
-    var VISICOM_KEY = '10a038764897fc6b39e4fa897a30675a';
+    var VISICOM_KEY = '7d6d0b7fbe2a45d907452f3b84ce279a';
+    // Ключі, які Visicom більше не приймає: якщо такий збережено на пристрої, використовуємо ключ сайту.
+    var RETIRED_VISICOM_KEYS = ['10a038764897fc6b39e4fa897a30675a'];
     var VISICOM_REGISTER_URL = 'https://api.visicom.ua/accounts/forms?action=register_form';
     var EARTH_R = 6378137;
     var DEFAULT_VIEW = { center: [48.73723, 37.58702], zoom: 16 };
@@ -1218,7 +1220,8 @@
         sectors: Array.isArray(saved.sectors) ? saved.sectors.filter(validSector) : [],
         colorSeq: isNum(saved.colorSeq) ? saved.colorSeq : 0,
         layer: saved.layer || 'osm',
-        visicomKey: typeof saved.visicomKey === 'string' && saved.visicomKey ? saved.visicomKey : VISICOM_KEY,
+        visicomKey: typeof saved.visicomKey === 'string' && saved.visicomKey
+            && RETIRED_VISICOM_KEYS.indexOf(saved.visicomKey) < 0 ? saved.visicomKey : VISICOM_KEY,
         compact: !!saved.compact,
         selected: null,
         hud: true,
