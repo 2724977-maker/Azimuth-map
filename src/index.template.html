@@ -1036,7 +1036,7 @@
     var STORAGE_KEY = 'azimuth-map:v2';
     // API-ключ Visicom Tiles (https://api.visicom.ua). Якщо вписати його сюди, мапа Візіком
     // працюватиме без напису про обмеження для всіх. Інакше ключ можна ввести в меню шарів.
-    var VISICOM_KEY = '';
+    var VISICOM_KEY = '10a038764897fc6b39e4fa897a30675a';
     var VISICOM_REGISTER_URL = 'https://api.visicom.ua/accounts/forms?action=register_form';
     var EARTH_R = 6378137;
     var DEFAULT_VIEW = { center: [48.73723, 37.58702], zoom: 16 };
@@ -2266,7 +2266,9 @@
         var note = el.visicomKeyNote;
         note.textContent = '';
         note.classList.toggle('ok', !!state.visicomKey);
-        if (state.visicomKey) {
+        if (state.visicomKey && state.visicomKey === VISICOM_KEY) {
+            note.appendChild(document.createTextNode('Використовується ключ сайту. Щоб замінити його своїм, вставте інший ключ.'));
+        } else if (state.visicomKey) {
             note.appendChild(document.createTextNode('Ключ збережено на цьому пристрої. '));
             var del = document.createElement('button');
             del.type = 'button';
