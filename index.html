@@ -12,6 +12,13 @@
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%230f1b2a'/%3E%3Cpath d='M16 6l5 14h-10z' fill='%23fff'/%3E%3Ccircle cx='16' cy='22' r='3' fill='%233b82f6'/%3E%3C/svg%3E">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+    <script>
+        // Резервний CDN, якщо cdnjs недоступний
+        window.L || document.write(
+            '<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">' +
+            '<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"><\/script>'
+        );
+    </script>
     <style>
         :root {
             --glass: rgba(255, 255, 255, 0.74);
@@ -662,6 +669,9 @@
             .topbar { top: 16px; }
             .panel { top: 80px; }
             .leaflet-bottom.leaflet-left { bottom: 0; left: 450px; }
+            .leaflet-bottom.leaflet-right { bottom: 0; }
+            .fabs { bottom: 34px; }
+            .toast { bottom: 34px; }
         }
 
         @media (prefers-reduced-motion: reduce) {
@@ -794,15 +804,15 @@
         <div class="fields">
             <label class="field" id="azField">
                 <span>Азимут, °</span>
-                <input type="number" id="azInput" inputmode="decimal" min="0" max="360" step="any" enterkeyhint="done">
+                <input type="text" id="azInput" inputmode="decimal" pattern="[0-9.,\-]*" enterkeyhint="done">
             </label>
             <label class="field" id="distField">
                 <span>Дальність, м</span>
-                <input type="number" id="distInput" inputmode="numeric" min="10" max="50000" step="any" enterkeyhint="done">
+                <input type="text" id="distInput" inputmode="decimal" pattern="[0-9.,]*" enterkeyhint="done">
             </label>
             <label class="field" id="widthField">
                 <span>Ширина, °</span>
-                <input type="number" id="widthInput" inputmode="numeric" min="0" max="360" step="any" enterkeyhint="done">
+                <input type="text" id="widthInput" inputmode="decimal" pattern="[0-9.,]*" enterkeyhint="done">
             </label>
         </div>
         <button class="btn primary block" type="submit" id="addBtn" disabled>
@@ -817,6 +827,12 @@
 <script>
 (() => {
     'use strict';
+
+    if (!window.L) {
+        document.body.innerHTML = '<div style="position:fixed;inset:0;display:grid;place-items:center;padding:24px;text-align:center;font:500 16px/1.5 system-ui,sans-serif;color:#0f1b2a;background:#eef1f5">' +
+            'Не вдалося завантажити бібліотеку мапи (Leaflet).<br>Перевірте підключення до інтернету та оновіть сторінку.</div>';
+        return;
+    }
 
     /* ================= Constants ================= */
     const STORAGE_KEY = 'azimuth-map:v2';
@@ -1225,6 +1241,8 @@
 
     [el.azInput, el.distInput, el.widthInput].forEach((input) => {
         input.addEventListener('input', () => {
+            const clean = input.value.replace(input === el.azInput ? /[^0-9.,-]/g : /[^0-9.,]/g, '');
+            if (clean !== input.value) input.value = clean;
             refreshForm();
             saveSoon();
         });
@@ -1544,7 +1562,7 @@
             li.addEventListener('click', () => focusSector(s.id));
             li.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') focusSector(s.id);
-                if (e.key === 'Delete' || e.key === 'Backspace') removeSector(s.id);
+                if (e.key === 'Delete') removeSector(s.id);
             });
             el.sectorList.appendChild(li);
         });
