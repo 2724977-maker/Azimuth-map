@@ -931,6 +931,33 @@
         }
         .leaflet-tooltip { font-family: var(--font-ui); font-weight: 700; border-radius: 8px; }
 
+        /* ---------- Компактніші розміри: більше місця для мапи ---------- */
+        .searchbar, .sectors-btn { height: 50px; }
+        .sectors-btn { min-width: 50px; }
+        .logo { width: 36px; height: 36px; }
+        .panel, .info-card { top: calc(64px + var(--safe-t)); }
+        .rail { gap: 8px; }
+        .rail-btn { width: 42px; height: 42px; }
+        .layers-pop { right: calc(var(--edge) + var(--safe-r) + 54px); }
+        .sheet { padding: 2px 14px calc(10px + max(0px, var(--safe-b) - 20px)); }
+        .grabber { height: 14px; }
+        .grabber::before { top: 5px; }
+        .station { min-height: 38px; margin-bottom: 8px; gap: 8px; }
+        .station-mark, .station .round-btn { width: 32px; height: 32px; }
+        .station-mark { border-radius: 10px; }
+        .instrument { gap: 12px; }
+        .dial-wrap, .dial { width: 128px; height: 128px; }
+        .fields { gap: 6px; }
+        .field { min-height: 50px; padding: 5px 11px; border-radius: 14px; }
+        .field.az { min-height: 62px; }
+        .field input { font-size: 1.1rem; }
+        .field.az input { font-size: 1.75rem; }
+        .presets { margin-top: 10px; }
+        .presets .chip { height: 30px; padding: 0 11px; font-size: 0.78rem; }
+        .cta { height: 48px; margin-top: 10px; border-radius: 16px; font-size: 0.95rem; }
+        .sheet.compact .field.az { min-height: 50px; }
+        .sheet.compact .field.az input { font-size: 1.1rem; }
+
         /* ---------- Wide screens ---------- */
         @media (min-width: 760px) {
             .topbar { left: 16px; right: auto; width: 440px; top: calc(16px + var(--safe-t)); }
