@@ -1,7 +1,7 @@
 /* Azimuth Map service worker: офлайн-запуск застосунку й кеш переглянутих тайлів. */
 'use strict';
 
-var VERSION = '5d512580d889';
+var VERSION = '8589d6f319c8';
 var SHELL_CACHE = 'azimuth-shell-' + VERSION;
 var TILE_CACHE = 'azimuth-tiles-v2';
 var FONT_CACHE = 'azimuth-fonts-v1';
@@ -15,7 +15,8 @@ var SHELL = [
     './icons/icon-192.png',
     './icons/icon-512.png',
     './icons/apple-touch-icon.png',
-    './icons/favicon-32.png'
+    './icons/favicon-32.png',
+    './icons/splash-1206x2622.png'
 ];
 
 var TILE_HOSTS = /(^|\.)(tile\.openstreetmap\.org|server\.arcgisonline\.com|visicom\.ua)$/;

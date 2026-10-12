@@ -51,4 +51,11 @@ draw_icon(512).save(out / "icon-512.png")
 draw_icon(512, maskable=True).save(out / "icon-maskable-512.png")
 draw_icon(180, rounded=False).save(out / "apple-touch-icon.png")
 draw_icon(32).save(out / "favicon-32.png")
+
+# Заставки запуску з головного екрана (iPhone 17 / 17 Pro, iPhone Air, iPhone 17 Pro Max).
+for w, h in [(1206, 2622), (1260, 2736), (1320, 2868)]:
+    splash = Image.new("RGB", (w, h), INK[:3])
+    mark = draw_icon(int(w * 0.30), rounded=False)
+    splash.paste(mark, ((w - mark.width) // 2, int(h * 0.42) - mark.height // 2), mark)
+    splash.save(out / f"splash-{w}x{h}.png", optimize=True)
 print("icons written to", out)

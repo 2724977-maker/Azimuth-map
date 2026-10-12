@@ -3,7 +3,10 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-    <meta name="theme-color" content="#0c1420">
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#e4e7eb">
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0c1420">
+    <meta name="color-scheme" content="light dark">
+    <meta name="format-detection" content="telephone=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -13,6 +16,10 @@
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
     <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+    <!-- Заставки для застосунку на головному екрані: iPhone 17 / 17 Pro, iPhone Air, iPhone 17 Pro Max -->
+    <link rel="apple-touch-startup-image" media="(device-width: 402px) and (device-height: 874px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="icons/splash-1206x2622.png">
+    <link rel="apple-touch-startup-image" media="(device-width: 420px) and (device-height: 912px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="icons/splash-1260x2736.png">
+    <link rel="apple-touch-startup-image" media="(device-width: 440px) and (device-height: 956px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="icons/splash-1320x2868.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap">
@@ -711,14 +718,23 @@ svg.leaflet-image-layer.leaflet-interactive path {
             --shadow: 0 18px 50px -12px rgba(12, 20, 32, 0.28), 0 2px 6px rgba(12, 20, 32, 0.06);
             --shadow-sm: 0 6px 18px -6px rgba(12, 20, 32, 0.25);
             --blur: blur(24px) saturate(180%);
-            --font-ui: "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
-            --font-num: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+            /* На iPhone — системні SF Pro та SF Pro Rounded для цифр; на інших пристроях — Manrope і JetBrains Mono. */
+            --font-ui: -apple-system, BlinkMacSystemFont, "Manrope", "Segoe UI", Roboto, Arial, sans-serif;
+            --font-num: ui-rounded, "SF Pro Rounded", "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
             --r-xl: 28px;
             --r-lg: 20px;
             --r-md: 14px;
             --ease: cubic-bezier(0.32, 0.72, 0, 1);
             --safe-t: env(safe-area-inset-top, 0px);
             --safe-b: env(safe-area-inset-bottom, 0px);
+            --safe-l: env(safe-area-inset-left, 0px);
+            --safe-r: env(safe-area-inset-right, 0px);
+            /* Відступ від країв екрана та радіус, концентричний із закругленням дисплея iPhone (~55 pt). */
+            --edge: 10px;
+            --display-r: 55px;
+            --kb: 0px;
+            --glass-hi: rgba(255, 255, 255, 0.75);
+            --glass-hi-2: rgba(255, 255, 255, 0.28);
             --sheet-h: 0px;
             color-scheme: light;
         }
@@ -743,6 +759,8 @@ svg.leaflet-image-layer.leaflet-interactive path {
                 --map-bg: #1b2028;
                 --shadow: 0 18px 50px -12px rgba(0, 0, 0, 0.7), 0 2px 6px rgba(0, 0, 0, 0.3);
                 --shadow-sm: 0 6px 18px -6px rgba(0, 0, 0, 0.6);
+                --glass-hi: rgba(255, 255, 255, 0.16);
+                --glass-hi-2: rgba(255, 255, 255, 0.05);
                 color-scheme: dark;
             }
         }
@@ -758,6 +776,9 @@ svg.leaflet-image-layer.leaflet-interactive path {
             font-family: var(--font-ui);
             font-size: 15px;
             -webkit-font-smoothing: antialiased;
+            -webkit-text-size-adjust: 100%;
+            text-size-adjust: 100%;
+            -webkit-touch-callout: none;
             -webkit-user-select: none;
             user-select: none;
             overscroll-behavior: none;
@@ -778,20 +799,21 @@ svg.leaflet-image-layer.leaflet-interactive path {
             background: var(--map-bg);
         }
 
+        /* «Рідке скло» в дусі iOS 26: напівпрозора підкладка, світлий відблиск по верхньому краю. */
         .glass {
             background: var(--surface);
             -webkit-backdrop-filter: var(--blur);
             backdrop-filter: var(--blur);
-            border: 1px solid var(--line);
-            box-shadow: var(--shadow);
+            border: 0.5px solid var(--line);
+            box-shadow: inset 0 1px 0 var(--glass-hi), inset 0 0 0 0.5px var(--glass-hi-2), var(--shadow);
         }
 
         /* ---------- Search bar ---------- */
         .topbar {
             position: fixed;
-            top: calc(10px + var(--safe-t));
-            left: 12px;
-            right: 12px;
+            top: calc(6px + var(--safe-t));
+            left: calc(var(--edge) + var(--safe-l));
+            right: calc(var(--edge) + var(--safe-r));
             z-index: 30;
             display: flex;
             gap: 8px;
@@ -843,7 +865,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
             flex-shrink: 0;
             transition: background 0.2s, transform 0.15s;
         }
-        .round-btn:hover { background: var(--fill); }
+        @media (hover: hover) { .round-btn:hover { background: var(--fill); } }
         .round-btn:active { transform: scale(0.92); }
         .round-btn.solid { background: var(--fill); }
         .round-btn.danger { color: var(--danger); background: var(--danger-soft); }
@@ -867,9 +889,9 @@ svg.leaflet-image-layer.leaflet-interactive path {
         /* ---------- Panels ---------- */
         .panel {
             position: fixed;
-            top: calc(74px + var(--safe-t));
-            left: 12px;
-            right: 12px;
+            top: calc(70px + var(--safe-t));
+            left: calc(var(--edge) + var(--safe-l));
+            right: calc(var(--edge) + var(--safe-r));
             z-index: 28;
             max-height: calc(100vh - var(--safe-t) - var(--sheet-h) - 100px);
             max-height: calc(100dvh - var(--safe-t) - var(--sheet-h) - 100px);
@@ -952,7 +974,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
             transition: background 0.15s;
         }
         .sector-item + .sector-item { border-top: 1px solid var(--line); }
-        .sector-item:hover { background: var(--fill); }
+        @media (hover: hover) { .sector-item:hover { background: var(--fill); } }
 
         .wedge-icon {
             width: 44px; height: 44px;
@@ -1017,7 +1039,8 @@ svg.leaflet-image-layer.leaflet-interactive path {
             cursor: pointer;
             transition: background 0.15s;
         }
-        .result:hover, .result:focus-visible { background: var(--fill); }
+        .result:focus-visible { background: var(--fill); }
+        @media (hover: hover) { .result:hover { background: var(--fill); } }
         .result-icon {
             width: 36px; height: 36px; border-radius: 12px;
             background: var(--fill); color: var(--ink-2);
@@ -1048,8 +1071,8 @@ svg.leaflet-image-layer.leaflet-interactive path {
         /* ---------- Right rail ---------- */
         .rail {
             position: fixed;
-            right: 12px;
-            bottom: calc(var(--sheet-h) + 14px);
+            right: calc(var(--edge) + var(--safe-r));
+            bottom: calc(var(--sheet-h) + 12px);
             z-index: 20;
             display: flex;
             flex-direction: column;
@@ -1076,8 +1099,8 @@ svg.leaflet-image-layer.leaflet-interactive path {
 
         .layers-pop {
             position: fixed;
-            right: 68px;
-            bottom: calc(var(--sheet-h) + 14px);
+            right: calc(var(--edge) + var(--safe-r) + 58px);
+            bottom: calc(var(--sheet-h) + 12px);
             z-index: 29;
             width: 268px;
             max-width: calc(100% - 84px);
@@ -1106,7 +1129,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
             border: 1.5px solid transparent;
             background: var(--fill);
             color: var(--ink);
-            font: 600 0.8rem var(--font-num);
+            font: 600 16px var(--font-num);
             outline: 0;
             -webkit-user-select: text;
             user-select: text;
@@ -1127,7 +1150,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
             font-weight: 700;
             font-size: 0.9rem;
         }
-        .layer-opt:hover { background: var(--fill); }
+        @media (hover: hover) { .layer-opt:hover { background: var(--fill); } }
         .layer-thumb {
             width: 38px; height: 38px;
             border-radius: 10px;
@@ -1140,12 +1163,12 @@ svg.leaflet-image-layer.leaflet-interactive path {
         /* ---------- Instrument sheet ---------- */
         .sheet {
             position: fixed;
-            left: 10px;
-            right: 10px;
-            bottom: calc(10px + var(--safe-b));
+            left: calc(var(--edge) + var(--safe-l));
+            right: calc(var(--edge) + var(--safe-r));
+            bottom: var(--edge);
             z-index: 30;
-            border-radius: var(--r-xl);
-            padding: 4px 14px 14px;
+            border-radius: max(var(--r-xl), calc(var(--display-r) - var(--edge)));
+            padding: 4px 16px calc(14px + max(0px, var(--safe-b) - 18px));
             transition: transform 0.45s var(--ease), opacity 0.3s;
         }
 
@@ -1348,9 +1371,9 @@ svg.leaflet-image-layer.leaflet-interactive path {
         /* ---------- Info card (ruler, bearing fix) ---------- */
         .info-card {
             position: fixed;
-            top: calc(74px + var(--safe-t));
-            left: 12px;
-            right: 12px;
+            top: calc(70px + var(--safe-t));
+            left: calc(var(--edge) + var(--safe-l));
+            right: calc(var(--edge) + var(--safe-r));
             z-index: 26;
             border-radius: var(--r-xl);
             padding: 14px 14px 12px 16px;
@@ -1585,6 +1608,44 @@ svg.leaflet-image-layer.leaflet-interactive path {
             .leaflet-bottom.leaflet-left { bottom: 0; left: 470px; }
             .leaflet-bottom.leaflet-right { bottom: 0; }
         }
+
+        /* iPhone у горизонтальній орієнтації: панель приладу — колонкою зліва, списки й картки — справа. */
+        @media (min-width: 760px) and (max-height: 520px) {
+            .topbar { left: calc(var(--edge) + var(--safe-l)); width: 360px; top: calc(6px + var(--safe-t)); }
+            .sheet {
+                left: calc(var(--edge) + var(--safe-l));
+                width: 360px;
+                top: calc(68px + var(--safe-t));
+                bottom: var(--edge);
+                overflow-y: auto;
+                overscroll-behavior: contain;
+                border-radius: var(--r-xl);
+                padding-bottom: calc(14px + var(--safe-b));
+            }
+            .panel {
+                left: auto;
+                right: calc(var(--edge) + var(--safe-r) + 58px);
+                width: 380px;
+                top: calc(6px + var(--safe-t));
+                max-height: calc(100vh - 2 * var(--edge) - var(--safe-t) - var(--safe-b));
+                max-height: calc(100dvh - 2 * var(--edge) - var(--safe-t) - var(--safe-b));
+            }
+            .info-card { right: calc(var(--edge) + var(--safe-r) + 58px); width: 360px; top: calc(6px + var(--safe-t)); }
+            .rail { right: calc(var(--edge) + var(--safe-r)); bottom: calc(var(--edge) + var(--safe-b)); }
+            .layers-pop { right: calc(var(--edge) + var(--safe-r) + 58px); bottom: calc(var(--edge) + var(--safe-b)); }
+            .dial-wrap, .dial { width: 124px; height: 124px; }
+            .toast { left: calc(50% + 185px + var(--safe-l) / 2); bottom: calc(var(--edge) + var(--safe-b)); }
+            .leaflet-bottom.leaflet-left { left: calc(380px + var(--safe-l)); }
+        }
+
+        /* Відкрита клавіатура iPhone: піднімаємо панель над нею й ховаємо компас, щоб поля були видні. */
+        .kb-open .sheet {
+            bottom: calc(var(--kb) + 8px);
+            padding-bottom: 14px;
+            transition: bottom 0.25s var(--ease);
+        }
+        .kb-open .sheet .dial-wrap, .kb-open .sheet .presets { display: none; }
+        .kb-open .rail, .kb-open .toast { opacity: 0; pointer-events: none; }
 
         @media (max-width: 359px) {
             .dial-wrap, .dial { width: 128px; height: 128px; }
@@ -2398,6 +2459,22 @@ svg.leaflet-image-layer.leaflet-interactive path {
     }
     if ('ResizeObserver' in window) new ResizeObserver(updateSheetHeight).observe(el.sheet);
     window.addEventListener('resize', updateSheetHeight);
+
+    // iOS Safari не зсуває фіксовані елементи над клавіатурою — робимо це самі через visualViewport.
+    (function keyboardAvoidance() {
+        var vv = window.visualViewport;
+        if (!vv) return;
+        function update() {
+            var kb = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+            var open = kb > 80 && el.sheet.contains(document.activeElement);
+            document.documentElement.style.setProperty('--kb', (open ? Math.round(kb) : 0) + 'px');
+            document.body.classList.toggle('kb-open', open);
+        }
+        vv.addEventListener('resize', update);
+        vv.addEventListener('scroll', update);
+        document.addEventListener('focusin', function () { setTimeout(update, 50); });
+        document.addEventListener('focusout', function () { setTimeout(update, 50); });
+    })();
 
     /* ================= Compass dial ================= */
     (function buildDial() {
