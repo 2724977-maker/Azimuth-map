@@ -68,6 +68,7 @@
             --edge: 10px;
             --display-r: 55px;
             --kb: 0px;
+            --vgap: 0px;
             --glass-hi: rgba(255, 255, 255, 0.75);
             --glass-hi-2: rgba(255, 255, 255, 0.28);
             --sheet-h: 0px;
@@ -153,8 +154,10 @@
 
         #map {
             position: fixed;
-            top: 0; right: 0; bottom: 0; left: 0;
-            width: 100%; height: 100%;
+            top: 0; right: 0; left: 0;
+            /* --vgap: смуга, яку iOS 26 недодає до висоти застосунку з головного екрана (див. скрипт). */
+            bottom: calc(-1 * var(--vgap));
+            width: 100%; height: calc(100% + var(--vgap));
             z-index: 0;
             background: var(--map-bg);
         }
@@ -525,7 +528,7 @@
             position: fixed;
             left: calc(var(--edge) + var(--safe-l));
             right: calc(var(--edge) + var(--safe-r));
-            bottom: var(--edge);
+            bottom: calc(var(--edge) - var(--vgap));
             z-index: 30;
             border-radius: max(var(--r-xl), calc(var(--display-r) - var(--edge)));
             padding: 4px 16px calc(14px + max(0px, var(--safe-b) - 18px));
@@ -698,7 +701,8 @@
         /* Compact sheet */
         .sheet.compact .dial-wrap,
         .sheet.compact .presets { display: none; }
-        .sheet.compact .fields { grid-template-columns: 1.1fr 1.2fr 1fr; }
+        .sheet.compact .fields { grid-template-columns: 1.3fr 1.15fr 0.95fr; }
+        .sheet.compact #azLabel { display: none; }
         .sheet.compact .field.az { grid-column: auto; min-height: 56px; }
         .sheet.compact .field.az input { font-size: 1.2rem; }
         .sheet.compact .field.az .unit { font-size: 0.85rem; }
@@ -938,7 +942,7 @@
 
         /* ---------- Leaflet tweaks ---------- */
         .leaflet-container { font-family: var(--font-ui); background: var(--map-bg); }
-        .leaflet-bottom { bottom: var(--sheet-h); transition: bottom 0.45s var(--ease); }
+        .leaflet-bottom { bottom: calc(var(--sheet-h) + var(--vgap)); transition: bottom 0.45s var(--ease); }
         .leaflet-control-attribution {
             background: var(--surface) !important;
             color: var(--muted) !important;
@@ -2012,6 +2016,24 @@
         svg.appendChild(svgEl('circle', { r: 3, fill: s.color }));
         return svg;
     }
+
+    // iOS 26: застосунок, запущений із головного екрана, отримує висоту вікна на висоту рядка стану
+    // меншу за екран, і внизу лишається порожня смуга. Вимірюємо її й розтягуємо мапу та панель до краю.
+    function updateViewportGap() {
+        var standalone = window.navigator.standalone === true
+            || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+        var gap = 0;
+        if (standalone && window.screen) {
+            var portrait = window.innerHeight >= window.innerWidth;
+            var full = portrait ? Math.max(screen.width, screen.height) : Math.min(screen.width, screen.height);
+            var diff = full - window.innerHeight;
+            if (diff > 0 && diff <= 120) gap = diff;
+        }
+        document.documentElement.style.setProperty('--vgap', gap + 'px');
+    }
+    updateViewportGap();
+    window.addEventListener('resize', updateViewportGap);
+    window.addEventListener('orientationchange', function () { setTimeout(updateViewportGap, 300); });
 
     function updateSheetHeight() {
         var h = state.hud ? Math.max(0, window.innerHeight - el.sheet.getBoundingClientRect().top) : 0;
