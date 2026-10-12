@@ -658,8 +658,107 @@
         /* ---------- HUD hidden ---------- */
         .hud-hidden .topbar { transform: translateY(calc(-100% - 40px)); opacity: 0; pointer-events: none; }
         .hud-hidden .sheet { transform: translateY(calc(100% + 40px)); opacity: 0; pointer-events: none; }
-        .hud-hidden .panel, .hud-hidden .layers-pop { display: none; }
+        .hud-hidden .panel, .hud-hidden .layers-pop, .hud-hidden .info-card { display: none; }
         .hud-hidden .rail-group.hideable { opacity: 0; transform: translateX(80px); pointer-events: none; }
+
+        /* ---------- Magnetic / true azimuth toggle ---------- */
+        .field-head { display: flex; align-items: center; justify-content: space-between; gap: 6px; min-width: 0; }
+        .field-head .eyebrow { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .mode-toggle {
+            display: inline-flex;
+            flex-shrink: 0;
+            padding: 2px;
+            border-radius: 99px;
+            background: var(--fill-2);
+            font: 800 0.62rem var(--font-ui);
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+        }
+        .mode-toggle span { padding: 3px 7px; border-radius: 99px; color: var(--muted); transition: background 0.2s, color 0.2s; }
+        .mode-toggle span.on { background: var(--primary); color: var(--primary-ink); }
+        .decl-line { font-size: 0.72rem; font-weight: 700; color: var(--accent); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .sheet.compact .decl-line { display: none; }
+        .stat.wide { grid-column: 1 / -1; }
+
+        /* ---------- Info card (ruler, bearing fix) ---------- */
+        .info-card {
+            position: fixed;
+            top: calc(74px + var(--safe-t));
+            left: 12px;
+            right: 12px;
+            z-index: 26;
+            border-radius: var(--r-xl);
+            padding: 14px 14px 12px 16px;
+            animation: drop 0.3s var(--ease);
+        }
+        .info-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+        .info-head .round-btn { width: 34px; height: 34px; margin-left: auto; }
+        .info-badge {
+            width: 34px; height: 34px;
+            border-radius: 11px;
+            background: var(--accent);
+            color: var(--accent-ink);
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+        }
+        .info-title { font-weight: 800; font-size: 1rem; letter-spacing: -0.01em; }
+        .info-sub { font-size: 0.78rem; color: var(--muted); font-weight: 600; }
+        .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); gap: 6px; }
+        .stat { padding: 8px 10px; border-radius: 14px; background: var(--fill); min-width: 0; }
+        .stat b { display: block; font: 700 1.05rem var(--font-num); letter-spacing: -0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .stat small { display: block; color: var(--muted); font-size: 0.72rem; font-weight: 600; margin-top: 1px; }
+        .info-hint { font-size: 0.86rem; color: var(--ink-2); line-height: 1.45; }
+        .info-list { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 4px; }
+        .info-list li { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; color: var(--ink-2); }
+        .info-list i { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+        .info-list .num { margin-left: auto; color: var(--ink); font-weight: 700; }
+        .info-actions { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+        .info-actions .chip.primary { background: var(--primary); color: var(--primary-ink); }
+
+        /* ---------- Bearing selection ---------- */
+        .sector-item .check {
+            position: absolute;
+            right: -4px; bottom: -4px;
+            width: 20px; height: 20px;
+            border-radius: 50%;
+            background: var(--surface-solid);
+            border: 2px solid var(--line);
+            display: none;
+            align-items: center; justify-content: center;
+            color: var(--accent-ink);
+        }
+        .selecting .sector-item .check { display: flex; }
+        .selecting .sector-actions { display: none; }
+        .sector-item.picked .check { background: var(--accent); border-color: var(--accent); }
+        .sector-item.picked { background: var(--accent-soft); }
+        .wedge-icon { position: relative; }
+        .select-bar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid var(--line);
+        }
+        .select-bar span { flex: 1; min-width: 0; font-size: 0.8rem; color: var(--ink-2); font-weight: 600; line-height: 1.35; }
+        .select-bar .chip.primary { background: var(--accent); color: var(--accent-ink); }
+        .select-bar .chip.primary:disabled { opacity: 0.4; }
+
+        /* ---------- Map tool markers ---------- */
+        .tool-icon { background: none; border: 0; }
+        .ruler-pt {
+            position: absolute;
+            left: -11px; top: -11px;
+            width: 22px; height: 22px;
+            border-radius: 50%;
+            background: #0c1420;
+            color: #ffffff;
+            border: 2.5px solid #ffffff;
+            font: 800 0.66rem var(--font-ui);
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+        }
+        .fix-mark { position: absolute; left: -18px; top: -18px; width: 36px; height: 36px; }
 
         /* ---------- Tile notice ---------- */
         .tile-notice {
@@ -813,6 +912,7 @@
         @media (min-width: 760px) {
             .topbar { left: 16px; right: auto; width: 440px; top: calc(16px + var(--safe-t)); }
             .panel { left: 16px; right: auto; width: 440px; top: calc(82px + var(--safe-t)); max-height: calc(100vh - 100px); }
+            .info-card { left: auto; right: 74px; width: 360px; top: calc(16px + var(--safe-t)); }
             .sheet { left: 16px; right: auto; width: 440px; bottom: calc(16px + var(--safe-b)); }
             .rail { bottom: 36px; right: 16px; }
             .layers-pop { bottom: 36px; right: 74px; }
@@ -891,6 +991,10 @@
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4M7 9l5-5 5 5M5 20h14"/></svg>
             Імпорт
         </button>
+        <button class="chip" id="bearingBtn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M3 20L13 4M21 20L9 6"/><circle cx="11.2" cy="8.4" r="2.4" fill="currentColor" stroke="none"/></svg>
+            Пеленгація
+        </button>
         <button class="chip danger" id="clearBtn">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>
             Очистити
@@ -904,8 +1008,15 @@
             Торкніться мапи, щоб поставити базову станцію,<br>поверніть стрілку компаса й натисніть «Встановити сектор».
         </div>
     </div>
+    <div class="select-bar" id="selectBar" hidden>
+        <span id="selectHint">Оберіть азимути щонайменше з двох різних станцій</span>
+        <button class="chip" type="button" id="selectCancel">Скасувати</button>
+        <button class="chip primary" type="button" id="selectFind" disabled>Знайти перетин</button>
+    </div>
     <input type="file" id="importInput" accept=".json,.geojson,application/json,application/geo+json" hidden>
 </section>
+
+<section class="info-card glass" id="infoCard" hidden aria-live="polite"></section>
 
 <!-- Right rail -->
 <div class="rail">
@@ -920,6 +1031,9 @@
     <div class="rail-group glass hideable">
         <button class="rail-btn" id="layerBtn" aria-label="Шари мапи" aria-expanded="false" aria-controls="layersPop">
             <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></svg>
+        </button>
+        <button class="rail-btn" id="rulerBtn" aria-label="Лінійка: відстань і азимут між точками" aria-pressed="false">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 15.5l12-12 5 5-12 12z"/><path d="M7.5 11.5l2 2M10.5 8.5l1.5 1.5M13.5 5.5l2 2M6 14l1.5 1.5"/></svg>
         </button>
         <button class="rail-btn" id="locateBtn" aria-label="Моє місцезнаходження">
             <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M3 11l18-8-8 18-2-8z"/></svg>
@@ -981,11 +1095,17 @@
             </div>
             <div class="fields">
                 <label class="field az" id="azField">
-                    <span class="eyebrow">Азимут</span>
+                    <span class="field-head">
+                        <span class="eyebrow" id="azLabel">Азимут</span>
+                        <button class="mode-toggle" type="button" id="azModeBtn" aria-label="Перемкнути істинний / магнітний азимут">
+                            <span data-mode="true">Іст</span><span data-mode="mag">Маг</span>
+                        </button>
+                    </span>
                     <span class="field-row">
                         <input type="text" id="azInput" inputmode="decimal" enterkeyhint="done" aria-label="Азимут, градуси">
                         <span class="unit">°</span>
                     </span>
+                    <span class="decl-line" id="declLine" hidden></span>
                 </label>
                 <label class="field" id="distField">
                     <span class="eyebrow">Дальність</span>
@@ -1049,6 +1169,7 @@
     var COLORS = ['#ff5b2e', '#2f6bff', '#13a35b', '#9b51e0', '#f2a900', '#00a3bf', '#e8417e', '#5b6b7f'];
     var LIMITS = { dist: { min: 10, max: 50000 }, width: { min: 0, max: 360 } };
     var DIST_PRESETS = [250, 500, 1000, 2000, 5000, 10000];
+    var MAX_FIX_RANGE = 500000; // пеленг шукаємо в радіусі 500 км від станцій
     var WIDTH_PRESETS = [0, 30, 60, 90, 120, 360];
 
     var $ = function (id) { return document.getElementById(id); };
@@ -1070,7 +1191,10 @@
         dial: $('dial'), dialTicks: $('dialTicks'), dialWedge: $('dialWedge'), dialNeedle: $('dialNeedle'),
         dialNeedleLine: $('dialNeedleLine'), dialNeedleTip: $('dialNeedleTip'), dialHub: $('dialHub'),
         presets: $('presets'), nextSwatch: $('nextSwatch'), addBtn: $('addBtn'),
-        tileNotice: $('tileNotice'), toast: $('toast')
+        tileNotice: $('tileNotice'), toast: $('toast'),
+        azModeBtn: $('azModeBtn'), azLabel: $('azLabel'), declLine: $('declLine'), rulerBtn: $('rulerBtn'), infoCard: $('infoCard'),
+        bearingBtn: $('bearingBtn'), selectBar: $('selectBar'), selectHint: $('selectHint'),
+        selectCancel: $('selectCancel'), selectFind: $('selectFind')
     };
 
     /* ================= Storage ================= */
@@ -1093,6 +1217,7 @@
                 layerVersion: LAYER_PREF_VERSION,
                 visicomKey: state.visicomKey === VISICOM_KEY ? '' : state.visicomKey,
                 compact: state.compact,
+                azMode: state.azMode,
                 inputs: { az: el.azInput.value, dist: el.distInput.value, width: el.widthInput.value },
                 view: { center: [c.lat, c.lng], zoom: map.getZoom() }
             }));
@@ -1139,6 +1264,125 @@
         return Math.round(m) + ' м';
     }
     function fmtWidth(w) { return w <= 0 ? 'промінь' : w >= 360 ? 'коло' : fmtDeg(w); }
+    function fmtSigned(a) { return (a >= 0 ? '+' : '−') + Math.abs(a).toFixed(1).replace('.', ',') + '°'; }
+    // Азимут сектора так, як його ввели: магнітний позначаємо «М».
+    function fmtSectorAz(s) { return s.magAz != null ? fmtDeg(s.magAz) + ' М' : fmtDeg(s.az); }
+
+    /* ================= Geodesy ================= */
+    function distanceBetween(lat1, lng1, lat2, lng2) {
+        var p1 = toRad(lat1), p2 = toRad(lat2), dp = p2 - p1, dl = toRad(lng2 - lng1);
+        var h = Math.sin(dp / 2) * Math.sin(dp / 2) + Math.cos(p1) * Math.cos(p2) * Math.sin(dl / 2) * Math.sin(dl / 2);
+        return 2 * EARTH_R * Math.asin(Math.min(1, Math.sqrt(h)));
+    }
+
+    function bearingBetween(lat1, lng1, lat2, lng2) {
+        var p1 = toRad(lat1), p2 = toRad(lat2), dl = toRad(lng2 - lng1);
+        var y = Math.sin(dl) * Math.cos(p2);
+        var x = Math.cos(p1) * Math.sin(p2) - Math.sin(p1) * Math.cos(p2) * Math.cos(dl);
+        return normAz(toDeg(Math.atan2(y, x)));
+    }
+
+    // Перетин двох азимутів (великих кіл) попереду обох станцій; null, якщо вони розходяться.
+    function bearingIntersection(o1, brg1, o2, brg2) {
+        var p1 = toRad(o1[0]), l1 = toRad(o1[1]), p2 = toRad(o2[0]), l2 = toRad(o2[1]);
+        var t13 = toRad(brg1), t23 = toRad(brg2);
+        var dp = p2 - p1, dl = l2 - l1;
+        var d12 = 2 * Math.asin(Math.sqrt(Math.sin(dp / 2) * Math.sin(dp / 2) + Math.cos(p1) * Math.cos(p2) * Math.sin(dl / 2) * Math.sin(dl / 2)));
+        if (Math.abs(d12) < 1e-9) return null;
+        function clampAcos(v) { return Math.acos(Math.max(-1, Math.min(1, v))); }
+        var ta = clampAcos((Math.sin(p2) - Math.sin(p1) * Math.cos(d12)) / (Math.sin(d12) * Math.cos(p1)));
+        var tb = clampAcos((Math.sin(p1) - Math.sin(p2) * Math.cos(d12)) / (Math.sin(d12) * Math.cos(p2)));
+        var t12 = Math.sin(dl) > 0 ? ta : 2 * Math.PI - ta;
+        var t21 = Math.sin(dl) > 0 ? 2 * Math.PI - tb : tb;
+        var a1 = t13 - t12, a2 = t21 - t23;
+        a1 = Math.atan2(Math.sin(a1), Math.cos(a1));
+        a2 = Math.atan2(Math.sin(a2), Math.cos(a2));
+        if (Math.sin(a1) === 0 && Math.sin(a2) === 0) return null;
+        if (Math.sin(a1) * Math.sin(a2) < 0) return null;
+        var a3 = clampAcos(-Math.cos(a1) * Math.cos(a2) + Math.sin(a1) * Math.sin(a2) * Math.cos(d12));
+        var d13 = Math.atan2(Math.sin(d12) * Math.sin(a1) * Math.sin(a2), Math.cos(a2) + Math.cos(a1) * Math.cos(a3));
+        if (d13 <= 0) return null;
+        var p3 = Math.asin(Math.sin(p1) * Math.cos(d13) + Math.cos(p1) * Math.sin(d13) * Math.cos(t13));
+        var l3 = l1 + Math.atan2(Math.sin(t13) * Math.sin(d13) * Math.cos(p1), Math.cos(d13) - Math.sin(p1) * Math.sin(p3));
+        var res = [toDeg(p3), ((toDeg(l3) + 540) % 360) - 180];
+        // Перевіряємо, що точка лежить попереду обох станцій, а не на протилежному боці Землі.
+        function ahead(o, brg) {
+            var b = bearingBetween(o[0], o[1], res[0], res[1]);
+            return Math.abs(((b - brg + 540) % 360) - 180) < 1;
+        }
+        // Відкидаємо «перетин» на іншому боці Землі, коли азимути насправді розходяться.
+        var near = distanceBetween(o1[0], o1[1], res[0], res[1]) < MAX_FIX_RANGE
+            && distanceBetween(o2[0], o2[1], res[0], res[1]) < MAX_FIX_RANGE;
+        return near && ahead(o1, brg1) && ahead(o2, brg2) ? res : null;
+    }
+
+    /* ================= Magnetic declination (World Magnetic Model 2025) ================= */
+    var WMM_EPOCH = 2025.0;
+    // g, h, dg/dt, dh/dt для n = 1..12, m = 0..n (NOAA WMM2025)
+    var WMM_COEF = [-29351.8,0,12,0,-1410.8,4545.4,9.7,-21.5,-2556.6,0,-11.6,0,2951.1,-3133.6,-5.2,-27.7,1649.3,-815.1,-8,-12.1,1361,0,-1.3,0,-2404.1,-56.6,-4.2,4,1243.8,237.5,0.4,-0.3,453.6,-549.5,-15.6,-4.1,895,0,-1.6,0,799.5,278.6,-2.4,-1.1,55.7,-133.9,-6,4.1,-281.1,212,5.6,1.6,12.1,-375.6,-7,-4.4,-233.2,0,0.6,0,368.9,45.4,1.4,-0.5,187.2,220.2,0,2.2,-138.7,-122.9,0.6,0.4,-142,43,2.2,1.7,20.9,106.1,0.9,1.9,64.4,0,-0.2,0,63.8,-18.4,-0.4,0.3,76.9,16.8,0.9,-1.6,-115.7,48.8,1.2,-0.4,-40.9,-59.8,-0.9,0.9,14.9,10.9,0.3,0.7,-60.7,72.7,0.9,0.9,79.5,0,-0,0,-77,-48.9,-0.1,0.6,-8.8,-14.4,-0.1,0.5,59.3,-1,0.5,-0.8,15.8,23.4,-0.1,0,2.5,-7.4,-0.8,-1,-11.1,-25.1,-0.8,0.6,14.2,-2.3,0.8,-0.2,23.2,0,-0.1,0,10.8,7.1,0.2,-0.2,-17.5,-12.6,0,0.5,2,11.4,0.5,-0.4,-21.7,-9.7,-0.1,0.4,16.9,12.7,0.3,-0.5,15,0.7,0.2,-0.6,-16.8,-5.2,-0,0.3,0.9,3.9,0.2,0.2,4.6,0,-0,0,7.8,-24.8,-0.1,-0.3,3,12.2,0.1,0.3,-0.2,8.3,0.3,-0.3,-2.5,-3.3,-0.3,0.3,-13.1,-5.2,0,0.2,2.4,7.2,0.3,-0.1,8.6,-0.6,-0.1,-0.2,-8.7,0.8,0.1,0.4,-12.9,10,-0.1,0.1,-1.3,0,0.1,0,-6.4,3.3,0,0,0.2,0,0.1,-0,2,2.4,0.1,-0.2,-1,5.3,-0,0.1,-0.6,-9.1,-0.3,-0.1,-0.9,0.4,0,0.1,1.5,-4.2,-0.1,0,0.9,-3.8,-0.1,-0.1,-2.7,0.9,-0,0.2,-3.9,-9.1,-0,-0,2.9,0,0,0,-1.5,0,-0,-0,-2.5,2.9,0,0.1,2.4,-0.6,0,-0,-0.6,0.2,0,0.1,-0.1,0.5,-0.1,-0,-0.6,-0.3,0,-0,-0.1,-1.2,-0,0.1,1.1,-1.7,-0.1,-0,-1,-2.9,-0.1,0,-0.2,-1.8,-0.1,0,2.6,-2.3,-0.1,0,-2,0,0,0,-0.2,-1.3,0,-0,0.3,0.7,-0,0,1.2,1,-0,-0.1,-1.3,-1.4,-0,0.1,0.6,-0,-0,-0,0.6,0.6,0.1,-0,0.5,-0.1,-0,-0,-0.1,0.8,0,0,-0.4,0.1,0,-0,-0.2,-1,-0.1,-0,-1.3,0.1,-0,0,-0.7,0.2,-0.1,-0.1];
+
+    /* World Magnetic Model: магнітне схилення в точці. */
+    function magneticDeclination(latDeg, lngDeg, altKm, year) {
+        var N = 12, A = 6378.137, F = 1 / 298.257223563, E2 = F * (2 - F), RE = 6371.2;
+        var phi = latDeg * Math.PI / 180, lam = lngDeg * Math.PI / 180;
+        // Геодезичні координати -> геоцентричні сферичні.
+        var sinPhi = Math.sin(phi), cosPhi = Math.cos(phi);
+        var rc = A / Math.sqrt(1 - E2 * sinPhi * sinPhi);
+        var p = (rc + altKm) * cosPhi, z = (rc * (1 - E2) + altKm) * sinPhi;
+        var r = Math.sqrt(p * p + z * z);
+        var phic = Math.asin(z / r);
+        var theta = Math.PI / 2 - phic;
+        var ct = Math.cos(theta), st = Math.sin(theta);
+        if (st < 1e-10) st = 1e-10;
+        var dt = year - WMM_EPOCH;
+
+        var P = [], dP = [], S = [];
+        for (var i = 0; i <= N; i++) { P.push([]); dP.push([]); S.push([]); }
+        P[0][0] = 1; dP[0][0] = 0; S[0][0] = 1;
+        for (var n = 1; n <= N; n++) {
+            S[n][0] = S[n - 1][0] * (2 * n - 1) / n;
+            for (var m = 0; m <= n; m++) {
+                if (m > 0) S[n][m] = S[n][m - 1] * Math.sqrt((n - m + 1) * (m === 1 ? 2 : 1) / (n + m));
+                if (n === m) {
+                    P[n][m] = st * P[n - 1][m - 1];
+                    dP[n][m] = st * dP[n - 1][m - 1] + ct * P[n - 1][m - 1];
+                } else {
+                    var k = n > 1 ? ((n - 1) * (n - 1) - m * m) / ((2 * n - 1) * (2 * n - 3)) : 0;
+                    var p2 = m <= n - 2 ? P[n - 2][m] : 0, dp2 = m <= n - 2 ? dP[n - 2][m] : 0;
+                    P[n][m] = ct * P[n - 1][m] - k * p2;
+                    dP[n][m] = ct * dP[n - 1][m] - st * P[n - 1][m] - k * dp2;
+                }
+            }
+        }
+
+        var br = 0, bt = 0, bp = 0, idx = 0;
+        for (n = 1; n <= N; n++) {
+            var ar = Math.pow(RE / r, n + 2);
+            for (m = 0; m <= n; m++) {
+                var g = WMM_COEF[idx] + dt * WMM_COEF[idx + 2];
+                var h = WMM_COEF[idx + 1] + dt * WMM_COEF[idx + 3];
+                idx += 4;
+                var cm = Math.cos(m * lam), sm = Math.sin(m * lam);
+                var ps = S[n][m] * P[n][m], dps = S[n][m] * dP[n][m];
+                br += (n + 1) * ar * (g * cm + h * sm) * ps;
+                bt -= ar * (g * cm + h * sm) * dps;
+                bp -= ar * m * (-g * sm + h * cm) * ps / st;
+            }
+        }
+        var xs = -bt, ys = bp, zs = -br;
+        var psi = phic - phi;
+        var x = xs * Math.cos(psi) - zs * Math.sin(psi);
+        return Math.atan2(ys, x) * 180 / Math.PI;
+    }
+
+    function decimalYear(d) {
+        var start = Date.UTC(d.getUTCFullYear(), 0, 1), end = Date.UTC(d.getUTCFullYear() + 1, 0, 1);
+        return d.getUTCFullYear() + (d.getTime() - start) / (end - start);
+    }
+
+    function declinationAt(lat, lng) {
+        return magneticDeclination(lat, lng, 0, decimalYear(new Date()));
+    }
 
     /* ================= Coordinate parser ================= */
     function toNum(s) { return parseFloat(String(s).replace(',', '.')); }
@@ -1228,6 +1472,12 @@
         visicomKey: typeof saved.visicomKey === 'string' && saved.visicomKey
             && RETIRED_VISICOM_KEYS.indexOf(saved.visicomKey) < 0 ? saved.visicomKey : VISICOM_KEY,
         compact: !!saved.compact,
+        azMode: saved.azMode === 'mag' ? 'mag' : 'true',
+        tool: null,
+        ruler: { a: null, b: null },
+        picking: false,
+        picked: {},
+        fix: null,
         selected: null,
         hud: true,
         searchAbort: null
@@ -1508,14 +1758,14 @@
 
     function renderDial(v) {
         var color = nextColor();
-        var az = v.az == null ? 0 : v.az;
+        var az = v.inputAz == null ? 0 : v.inputAz;
         el.dialNeedle.setAttribute('transform', 'rotate(' + az + ')');
-        el.dialNeedle.style.opacity = v.az == null ? 0.25 : 1;
+        el.dialNeedle.style.opacity = v.inputAz == null ? 0.25 : 1;
         el.dialNeedleLine.setAttribute('stroke', color);
         el.dialNeedleTip.setAttribute('fill', color);
         el.dialHub.setAttribute('stroke', color);
         var w = v.width == null ? 0 : v.width;
-        el.dialWedge.setAttribute('d', v.az == null ? '' : wedgePath(az, w, 80));
+        el.dialWedge.setAttribute('d', v.inputAz == null ? '' : wedgePath(az, w, 80));
         el.dialWedge.setAttribute('fill', color);
         el.dialWedge.setAttribute('stroke', color);
         el.dial.setAttribute('aria-valuenow', String(Math.round(az)));
@@ -1628,6 +1878,7 @@
     document.addEventListener('keydown', function (e) {
         if (e.key !== 'Escape') return;
         if (!el.layersPop.hidden) closeLayers();
+        else if (state.tool === 'ruler') setRuler(false);
         else if (!el.listPanel.hidden || !el.searchPanel.hidden) {
             closePanels();
             el.searchInput.blur();
@@ -1648,9 +1899,18 @@
         el.distField.classList.toggle('invalid', el.distInput.value !== '' && !distOk);
         el.widthField.classList.toggle('invalid', !widthOk);
 
+        var inputAz = azOk ? normAz(azRaw) : null;
+        var decl = null;
+        if (state.azMode === 'mag') {
+            var ref = state.selected || map.getCenter();
+            decl = declinationAt(ref.lat, ref.lng);
+        }
         return {
             valid: azOk && distOk && widthOk,
-            az: azOk ? normAz(azRaw) : null,
+            // az — істинний азимут для побудови; inputAz — як введено (магнітний у режимі «Маг»).
+            az: azOk ? normAz(inputAz + (decl || 0)) : null,
+            inputAz: inputAz,
+            decl: decl,
             dist: distOk ? distRaw : null,
             width: widthOk ? widthRaw : null,
             errors: { az: !azOk, dist: !distOk, width: !widthOk }
@@ -1663,6 +1923,7 @@
         updatePickMarker(v);
         renderPreview(v);
         renderDial(v);
+        renderAzMode(v);
         renderPresets();
         sizeInputs();
         return v;
@@ -1687,6 +1948,31 @@
     el.azInput.addEventListener('change', function () {
         var v = toNum(el.azInput.value);
         if (isNum(v) && (v < 0 || v >= 360)) setAzimuth(v);
+    });
+
+    /* ================= True / magnetic azimuth ================= */
+    function renderAzMode(v) {
+        Array.prototype.forEach.call(el.azModeBtn.querySelectorAll('span'), function (sp) {
+            sp.classList.toggle('on', sp.getAttribute('data-mode') === state.azMode);
+        });
+        var mag = state.azMode === 'mag' && v.decl != null;
+        el.declLine.hidden = !mag;
+        if (mag) {
+            el.declLine.textContent = 'схил. ' + fmtSigned(v.decl) + (v.az != null ? ' → іст. ' + fmtDeg(v.az) : '');
+            el.azModeBtn.title = 'Магнітний азимут. Схилення ' + fmtSigned(v.decl) + ', істинний = магнітний + схилення';
+        } else {
+            el.azModeBtn.title = 'Істинний (географічний) азимут';
+        }
+    }
+
+    el.azModeBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        state.azMode = state.azMode === 'mag' ? 'true' : 'mag';
+        var v = refreshForm();
+        saveState();
+        toast(state.azMode === 'mag'
+            ? 'Магнітний азимут · схилення тут ' + fmtSigned(v.decl)
+            : 'Істинний (географічний) азимут');
     });
 
     /* ================= Sheet compact mode ================= */
@@ -1743,7 +2029,7 @@
         } else {
             needle.hidden = false;
             needle.style.transform = 'rotate(' + v.az + 'deg)';
-            bubble.textContent = fmtDeg(v.az);
+            bubble.textContent = v.decl != null ? fmtDeg(v.inputAz) + ' М' : fmtDeg(v.az);
         }
     }
 
@@ -1799,6 +2085,10 @@
             el.searchInput.blur();
             return;
         }
+        if (state.tool === 'ruler') {
+            rulerClick(e.latlng);
+            return;
+        }
         selectPoint(e.latlng);
     });
 
@@ -1846,12 +2136,16 @@
             color: nextColor(),
             created: Date.now()
         };
+        if (v.decl != null) {
+            sector.magAz = round(v.inputAz, 2);
+            sector.decl = round(v.decl, 2);
+        }
         state.colorSeq++;
         state.sectors.push(sector);
         renderSectors();
         refreshForm();
         saveState();
-        toast('Сектор ' + fmtDeg(sector.az) + ' · ' + fmtDist(sector.dist) + ' додано');
+        toast('Сектор ' + fmtSectorAz(sector) + ' · ' + fmtDist(sector.dist) + ' додано');
     }
 
     el.sectorForm.addEventListener('submit', function (e) {
@@ -1867,7 +2161,7 @@
         var removed = state.sectors.splice(idx, 1)[0];
         renderSectors();
         saveState();
-        toast('Сектор ' + fmtDeg(removed.az) + ' видалено', {
+        toast('Сектор ' + fmtSectorAz(removed) + ' видалено', {
             label: 'Повернути',
             run: function () {
                 state.sectors.splice(Math.min(idx, state.sectors.length), 0, removed);
@@ -1879,6 +2173,8 @@
 
     function clearAll() {
         if (!state.sectors.length) return;
+        state.fix = null;
+        renderFix();
         var backup = state.sectors.slice();
         state.sectors = [];
         renderSectors();
@@ -1907,8 +2203,10 @@
     function fitOptions() {
         var wide = window.innerWidth >= 760 && state.hud;
         var sheetH = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sheet-h')) || 0;
+        var top = 90;
+        if (!el.infoCard.hidden && !wide) top = Math.max(top, el.infoCard.getBoundingClientRect().bottom + 20);
         return {
-            paddingTopLeft: [wide ? 480 : 30, 90],
+            paddingTopLeft: [wide ? 480 : 30, top],
             paddingBottomRight: [76, (state.hud ? sheetH : 0) + 30],
             maxZoom: 18,
             duration: 0.6
@@ -1953,7 +2251,7 @@
                 icon: L.divIcon({
                     className: 'label-icon',
                     iconSize: [0, 0],
-                    html: '<div class="map-label"><i style="background:' + s.color + '"></i>' + fmtDeg(s.az) + ' · ' + fmtDist(s.dist) + '</div>'
+                    html: '<div class="map-label"><i style="background:' + s.color + '"></i>' + fmtSectorAz(s) + ' · ' + fmtDist(s.dist) + '</div>'
                 })
             }).addTo(sectorsLayer);
 
@@ -1978,6 +2276,10 @@
         el.listCount.textContent = n;
         el.emptyState.hidden = n > 0;
         el.fitBtn.disabled = el.exportBtn.disabled = el.clearBtn.disabled = n === 0;
+        el.bearingBtn.disabled = n < 2;
+        el.listPanel.classList.toggle('selecting', state.picking);
+        el.selectBar.hidden = !state.picking;
+        updateSelectBar();
         el.sectorList.textContent = '';
 
         state.sectors.slice().reverse().forEach(function (s) {
@@ -1989,6 +2291,11 @@
             icon.className = 'wedge-icon';
             icon.style.color = 'var(--ink)';
             icon.appendChild(miniWedge(s));
+            var check = document.createElement('span');
+            check.className = 'check';
+            check.appendChild(svgIcon('M5 12.5l4.5 4.5L19 7.5', 12, 3.4));
+            icon.appendChild(check);
+            if (state.picked[s.id]) li.classList.add('picked');
 
             var main = document.createElement('div');
             main.className = 'sector-main';
@@ -1996,14 +2303,14 @@
             title.className = 'sector-title';
             var azEl = document.createElement('b');
             azEl.className = 'num';
-            azEl.textContent = fmtDeg(s.az);
+            azEl.textContent = fmtSectorAz(s);
             var meta = document.createElement('span');
             meta.textContent = fmtDist(s.dist) + ' · ' + fmtWidth(s.width);
             title.appendChild(azEl);
             title.appendChild(meta);
             var sub = document.createElement('div');
             sub.className = 'sector-sub';
-            sub.textContent = fmtLatLng(s.origin[0], s.origin[1]);
+            sub.textContent = (s.magAz != null ? 'іст. ' + fmtDeg(s.az) + ' · ' : '') + fmtLatLng(s.origin[0], s.origin[1]);
             main.appendChild(title);
             main.appendChild(sub);
 
@@ -2038,9 +2345,15 @@
             li.appendChild(icon);
             li.appendChild(main);
             li.appendChild(actions);
-            li.addEventListener('click', function () { focusSector(s.id); });
+            li.addEventListener('click', function () {
+                if (state.picking) togglePicked(s.id);
+                else focusSector(s.id);
+            });
             li.addEventListener('keydown', function (e) {
-                if (e.key === 'Enter') focusSector(s.id);
+                if (e.key === 'Enter') {
+                    if (state.picking) togglePicked(s.id);
+                    else focusSector(s.id);
+                }
                 if (e.key === 'Delete') removeSector(s.id);
             });
             el.sectorList.appendChild(li);
@@ -2049,6 +2362,304 @@
 
     el.fitBtn.addEventListener('click', fitAll);
     el.clearBtn.addEventListener('click', clearAll);
+
+    /* ================= Info card ================= */
+    var cardOwner = null;
+
+    function h(tag, cls, text) {
+        var n = document.createElement(tag);
+        if (cls) n.className = cls;
+        if (text != null) n.textContent = text;
+        return n;
+    }
+
+    function showCard(owner, opts) {
+        cardOwner = owner;
+        var c = el.infoCard;
+        c.textContent = '';
+        var head = h('div', 'info-head');
+        var badge = h('span', 'info-badge');
+        badge.appendChild(svgIcon(opts.icon, 17, 2.4));
+        var titles = h('div');
+        titles.appendChild(h('div', 'info-title', opts.title));
+        if (opts.sub) titles.appendChild(h('div', 'info-sub', opts.sub));
+        var close = h('button', 'round-btn solid');
+        close.type = 'button';
+        close.setAttribute('aria-label', 'Закрити');
+        close.appendChild(svgIcon('M6 6l12 12M18 6L6 18', 13, 3));
+        close.addEventListener('click', opts.onClose);
+        head.appendChild(badge);
+        head.appendChild(titles);
+        head.appendChild(close);
+        c.appendChild(head);
+        opts.body.forEach(function (n) { c.appendChild(n); });
+        c.hidden = false;
+    }
+
+    function hideCard(owner) {
+        if (owner && cardOwner !== owner) return;
+        cardOwner = null;
+        el.infoCard.hidden = true;
+    }
+
+    function statBox(value, label, wide) {
+        var d = h('div', 'stat' + (wide ? ' wide' : ''));
+        d.appendChild(h('b', null, value));
+        d.appendChild(h('small', null, label));
+        return d;
+    }
+
+    function chipBtn(text, cls, onClick) {
+        var b = h('button', 'chip' + (cls ? ' ' + cls : ''), text);
+        b.type = 'button';
+        b.addEventListener('click', onClick);
+        return b;
+    }
+
+    // Підпис із магнітним азимутом: «Азимут А → Б · М 54,2°».
+    function magNote(label, trueAz, lat, lng) {
+        return label + ' · М ' + fmtDeg(normAz(trueAz - declinationAt(lat, lng)));
+    }
+
+    /* ================= Ruler ================= */
+    var rulerLayer = L.layerGroup().addTo(map);
+    var ICON_RULER = 'M3.5 15.5l12-12 5 5-12 12zM7.5 11.5l2 2M10.5 8.5l1.5 1.5M13.5 5.5l2 2';
+
+    function setRuler(on) {
+        state.tool = on ? 'ruler' : null;
+        el.rulerBtn.classList.toggle('active', on);
+        el.rulerBtn.setAttribute('aria-pressed', String(on));
+        state.ruler = { a: null, b: null };
+        renderRuler();
+        if (on) {
+            closePanels();
+            closeLayers();
+        }
+    }
+
+    function rulerClick(latlng) {
+        var p = [latlng.lat, L.Util.wrapNum(latlng.lng, [-180, 180], true)];
+        if (!state.ruler.a || state.ruler.b) state.ruler = { a: p, b: null };
+        else state.ruler.b = p;
+        renderRuler();
+    }
+
+    function rulerPoint(key, label) {
+        var m = L.marker(state.ruler[key], {
+            draggable: true,
+            keyboard: false,
+            icon: L.divIcon({ className: 'tool-icon', iconSize: [0, 0], html: '<div class="ruler-pt">' + label + '</div>' })
+        });
+        m.on('drag', function (e) {
+            var ll = e.target.getLatLng();
+            state.ruler[key] = [ll.lat, ll.lng];
+            renderRuler(true);
+        });
+        return m;
+    }
+
+    function renderRuler(dragging) {
+        if (!dragging) rulerLayer.clearLayers();
+        else rulerLayer.eachLayer(function (l) { if (!(l instanceof L.Marker) || l.options.isLabel) rulerLayer.removeLayer(l); });
+        if (state.tool !== 'ruler') {
+            hideCard('ruler');
+            return;
+        }
+        var a = state.ruler.a, b = state.ruler.b;
+        if (!dragging) {
+            if (a) rulerPoint('a', 'А').addTo(rulerLayer);
+            if (b) rulerPoint('b', 'Б').addTo(rulerLayer);
+        }
+        if (!a || !b) {
+            showCard('ruler', {
+                icon: ICON_RULER,
+                title: 'Лінійка',
+                sub: 'Відстань і азимут між двома точками',
+                onClose: function () { setRuler(false); },
+                body: [h('p', 'info-hint', a ? 'Тепер торкніться точки Б.' : 'Торкніться на мапі точки А — звідки вимірювати.')]
+            });
+            return;
+        }
+        var dist = distanceBetween(a[0], a[1], b[0], b[1]);
+        var fwd = bearingBetween(a[0], a[1], b[0], b[1]);
+        var back = bearingBetween(b[0], b[1], a[0], a[1]);
+        L.polyline([a, b], { color: '#0c1420', weight: 3, opacity: 0.85, dashArray: '8 6', interactive: false }).addTo(rulerLayer);
+        var mid = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+        L.marker(mid, {
+            interactive: false, keyboard: false, isLabel: true,
+            icon: L.divIcon({ className: 'label-icon', iconSize: [0, 0], html: '<div class="map-label"><i style="background:#0c1420"></i>' + fmtDist(dist) + ' · ' + fmtDeg(fwd) + '</div>' })
+        }).addTo(rulerLayer);
+
+        var grid = h('div', 'info-grid');
+        grid.appendChild(statBox(fmtDist(dist), 'Відстань'));
+        grid.appendChild(statBox(fmtDeg(fwd), magNote('Азимут А → Б', fwd, a[0], a[1])));
+        grid.appendChild(statBox(fmtDeg(back), magNote('Зворотний', back, b[0], b[1])));
+        var actions = h('div', 'info-actions');
+        actions.appendChild(chipBtn('Сектор від А на Б', 'primary', function () { sectorFromRuler(a, fwd, dist); }));
+        actions.appendChild(chipBtn('Копіювати', '', function () {
+            copyText(fmtDist(dist) + ', азимут ' + fmtDeg(fwd) + ' (' + fmtLatLng(a[0], a[1]) + ' → ' + fmtLatLng(b[0], b[1]) + ')');
+        }));
+        actions.appendChild(chipBtn('Нове вимірювання', '', function () {
+            state.ruler = { a: null, b: null };
+            renderRuler();
+        }));
+        showCard('ruler', {
+            icon: ICON_RULER,
+            title: 'Лінійка',
+            sub: 'Перетягуйте точки А і Б, щоб уточнити',
+            onClose: function () { setRuler(false); },
+            body: [grid, actions]
+        });
+    }
+
+    // Ставить станцію в точці А й заповнює азимут і дальність до точки Б.
+    function sectorFromRuler(a, trueAz, dist) {
+        setRuler(false);
+        var az = trueAz;
+        if (state.azMode === 'mag') az = normAz(trueAz - declinationAt(a[0], a[1]));
+        el.azInput.value = String(round(az, 1)).replace(/\.0$/, '');
+        el.distInput.value = String(Math.max(LIMITS.dist.min, Math.min(LIMITS.dist.max, Math.round(dist))));
+        selectPoint(L.latLng(a[0], a[1]));
+        if (state.compact) {
+            state.compact = false;
+            applyCompact();
+        }
+        saveSoon();
+        toast('Азимут і дальність перенесено — натисніть «Встановити сектор»');
+    }
+
+    el.rulerBtn.addEventListener('click', function () { setRuler(state.tool !== 'ruler'); });
+
+    /* ================= Bearing fix (пеленгація) ================= */
+    var fixLayer = L.layerGroup().addTo(map);
+    var ICON_FIX = 'M3 20L13 4M21 20L9 6';
+
+    function updateSelectBar() {
+        var ids = Object.keys(state.picked);
+        var origins = {};
+        ids.forEach(function (id) {
+            var s = state.sectors.filter(function (x) { return x.id === id; })[0];
+            if (s) origins[s.origin[0].toFixed(5) + ',' + s.origin[1].toFixed(5)] = true;
+        });
+        var stations = Object.keys(origins).length;
+        el.selectFind.disabled = stations < 2;
+        el.selectHint.textContent = ids.length
+            ? 'Обрано азимутів: ' + ids.length + ' · станцій: ' + stations + (stations < 2 ? ' (потрібно ≥ 2)' : '')
+            : 'Оберіть азимути щонайменше з двох різних станцій';
+    }
+
+    function togglePicked(id) {
+        if (state.picked[id]) delete state.picked[id];
+        else state.picked[id] = true;
+        renderList();
+    }
+
+    function setPicking(on) {
+        state.picking = on;
+        state.picked = {};
+        renderList();
+    }
+
+    el.bearingBtn.addEventListener('click', function () { setPicking(!state.picking); });
+    el.selectCancel.addEventListener('click', function () { setPicking(false); });
+    el.selectFind.addEventListener('click', function () {
+        var list = state.sectors.filter(function (s) { return state.picked[s.id]; });
+        var fix = computeFix(list);
+        if (!fix) {
+            toast('Обрані азимути не перетинаються попереду станцій — перевірте напрямки');
+            return;
+        }
+        state.fix = fix;
+        setPicking(false);
+        closePanels();
+        renderFix(true);
+    });
+
+    function computeFix(list) {
+        var points = [];
+        for (var i = 0; i < list.length; i++) {
+            for (var j = i + 1; j < list.length; j++) {
+                var a = list[i], b = list[j];
+                if (distanceBetween(a.origin[0], a.origin[1], b.origin[0], b.origin[1]) < 5) continue;
+                var p = bearingIntersection(a.origin, a.az, b.origin, b.az);
+                if (p) points.push(p);
+            }
+        }
+        if (!points.length) return null;
+        var lat = 0, lng = 0;
+        points.forEach(function (p) { lat += p[0]; lng += p[1]; });
+        lat /= points.length;
+        lng /= points.length;
+        var radius = 0;
+        points.forEach(function (p) { radius = Math.max(radius, distanceBetween(lat, lng, p[0], p[1])); });
+        return { lat: lat, lng: lng, radius: radius, points: points, sectors: list.slice() };
+    }
+
+    function renderFix(fly) {
+        fixLayer.clearLayers();
+        var f = state.fix;
+        if (!f) {
+            hideCard('fix');
+            return;
+        }
+        f.sectors.forEach(function (s) {
+            L.polyline([s.origin, [f.lat, f.lng]], { color: s.color, weight: 2.5, dashArray: '2 6', lineCap: 'round', interactive: false }).addTo(fixLayer);
+        });
+        if (f.points.length >= 3) {
+            L.polygon(f.points, { color: '#ff5b2e', weight: 1.5, fillColor: '#ff5b2e', fillOpacity: 0.18, interactive: false }).addTo(fixLayer);
+        }
+        if (f.radius > 0) {
+            L.circle([f.lat, f.lng], { radius: f.radius, color: '#ff5b2e', weight: 1.5, dashArray: '4 5', fillOpacity: 0.06, interactive: false }).addTo(fixLayer);
+        }
+        var mark = L.marker([f.lat, f.lng], {
+            keyboard: false,
+            zIndexOffset: 900,
+            icon: L.divIcon({
+                className: 'tool-icon', iconSize: [0, 0],
+                html: '<svg class="fix-mark" viewBox="-18 -18 36 36"><circle r="13" fill="#ff5b2e" fill-opacity=".18" stroke="#ff5b2e" stroke-width="2"/>' +
+                    '<path d="M0-17v9M0 8v9M-17 0h9M8 0h9" stroke="#0c1420" stroke-width="2.5" stroke-linecap="round"/><circle r="3.5" fill="#ff5b2e" stroke="#fff" stroke-width="1.5"/></svg>'
+            })
+        }).addTo(fixLayer);
+        mark.on('click', function () { showFixCard(); });
+        showFixCard();
+        if (fly) {
+            var b = L.latLngBounds([[f.lat, f.lng]]);
+            f.sectors.forEach(function (s) { b.extend(s.origin); });
+            map.flyToBounds(b, fitOptions());
+        }
+    }
+
+    function showFixCard() {
+        var f = state.fix;
+        if (!f) return;
+        var grid = h('div', 'info-grid');
+        grid.appendChild(statBox(fmtLatLng(f.lat, f.lng), 'Координати перетину', true));
+        grid.appendChild(statBox(f.points.length > 1 ? '±' + fmtDist(f.radius) : '—', f.points.length > 1 ? 'Розкид перетинів' : 'Для оцінки потрібно ≥ 3 азимути'));
+        var list = h('ul', 'info-list');
+        f.sectors.forEach(function (s) {
+            var li = h('li');
+            var dot = h('i');
+            dot.style.background = s.color;
+            li.appendChild(dot);
+            li.appendChild(h('span', null, fmtSectorAz(s) + ' від ' + fmtLatLng(s.origin[0], s.origin[1]).replace(/(\.\d{4})\d+/g, '$1')));
+            li.appendChild(h('span', 'num', fmtDist(distanceBetween(s.origin[0], s.origin[1], f.lat, f.lng))));
+            list.appendChild(li);
+        });
+        var actions = h('div', 'info-actions');
+        actions.appendChild(chipBtn('Копіювати координати', 'primary', function () { copyText(fmtLatLng(f.lat, f.lng)); }));
+        actions.appendChild(chipBtn('Показати', '', function () { map.flyTo([f.lat, f.lng], Math.max(map.getZoom(), 16), { duration: 0.6 }); }));
+        actions.appendChild(chipBtn('Прибрати', '', function () {
+            state.fix = null;
+            renderFix();
+        }));
+        showCard('fix', {
+            icon: ICON_FIX,
+            title: 'Пеленг',
+            sub: 'Перетин ' + f.sectors.length + ' азимутів',
+            onClose: function () { hideCard('fix'); },
+            body: [grid, list, actions]
+        });
+    }
 
     /* ================= Import / export ================= */
     function exportGeoJSON() {
@@ -2062,7 +2673,8 @@
             return {
                 type: 'Feature',
                 properties: {
-                    id: s.id, azimuth: s.az, distance: s.dist, width: s.width, color: s.color,
+                    id: s.id, azimuth: s.az, magnetic_azimuth: s.magAz != null ? s.magAz : null,
+                    declination: s.decl != null ? s.decl : null, distance: s.dist, width: s.width, color: s.color,
                     origin_lat: s.origin[0], origin_lng: s.origin[1],
                     end_lat: round(end[0], 7), end_lng: round(end[1], 7)
                 },
@@ -2099,6 +2711,11 @@
                 color: /^#[0-9a-f]{3,8}$/i.test(p.color || '') ? p.color : nextColor(),
                 created: Date.now()
             };
+            var magAz = Number(pick(p.magAz, p.magnetic_azimuth));
+            var decl = Number(pick(p.decl, p.declination));
+            if (p.magAz != null || p.magnetic_azimuth != null) {
+                if (isNum(magAz) && isNum(decl)) { s.magAz = normAz(magAz); s.decl = decl; }
+            }
             if (validSector(s) && validLatLng(s.origin[0], s.origin[1]) && s.dist > 0 && s.width >= 0 && s.width <= 360) {
                 state.colorSeq++;
                 state.sectors.push(s);
@@ -2338,6 +2955,14 @@
             cab.textContent = 'api.visicom.ua';
             note.appendChild(cab);
             note.appendChild(document.createTextNode(', що ключ активний і призначений для Visicom Tiles, а домен ' + (location.hostname || 'сайту') + ' додано до Referer.'));
+            if (VISICOM_KEY && state.visicomKey !== VISICOM_KEY) {
+                note.appendChild(document.createTextNode(' '));
+                var back = document.createElement('button');
+                back.type = 'button';
+                back.textContent = 'Повернути ключ сайту';
+                back.addEventListener('click', function () { setVisicomKey(''); });
+                note.appendChild(back);
+            }
         } else if (state.visicomKey && state.visicomKey === VISICOM_KEY) {
             note.appendChild(document.createTextNode('Використовується ключ сайту. Щоб замінити його своїм, вставте інший ключ.'));
         } else if (state.visicomKey) {
@@ -2462,7 +3087,8 @@
     updateSheetHeight();
 
     // Exposed for debugging / tests.
-    window.AzimuthMap = { parseCoordinates: parseCoordinates, destination: destination, sectorShape: sectorShape, state: state, visicomCheck: function () { return visicomCheck; } };
+    window.AzimuthMap = { parseCoordinates: parseCoordinates, destination: destination, sectorShape: sectorShape, state: state, visicomCheck: function () { return visicomCheck; },
+        declinationAt: declinationAt, bearingIntersection: bearingIntersection, bearingBetween: bearingBetween, distanceBetween: distanceBetween };
 })();
 </script>
 </body>
