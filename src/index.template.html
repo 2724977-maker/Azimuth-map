@@ -1265,6 +1265,7 @@
     <div class="eyebrow">Шар мапи</div>
     <div id="layerOptions"></div>
     <div class="layers-attrib" id="layersAttrib"></div>
+    <div class="layers-attrib">Версія застосунку: <span class="num">__BUILD__</span></div>
     <div class="look-box">
         <div class="eyebrow">Вигляд мапи</div>
         <div class="seg" id="lookSeg" role="radiogroup" aria-label="Вигляд мапи">
@@ -3455,7 +3456,20 @@
     });
     if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
         window.addEventListener('load', function () {
-            navigator.serviceWorker.register('sw.js').catch(function () { /* офлайн-режим недоступний */ });
+            var hadController = !!navigator.serviceWorker.controller;
+            navigator.serviceWorker.register('sw.js').then(function (reg) {
+                // Перевіряємо оновлення щоразу, коли застосунок повертається на екран.
+                document.addEventListener('visibilitychange', function () {
+                    if (document.visibilityState === 'visible') reg.update().catch(function () {});
+                });
+            }).catch(function () { /* офлайн-режим недоступний */ });
+            // Нова версія встановилась — одразу перезавантажуємо, щоб не лишатися на старій.
+            var reloading = false;
+            navigator.serviceWorker.addEventListener('controllerchange', function () {
+                if (!hadController || reloading) return;
+                reloading = true;
+                location.reload();
+            });
         });
     }
 
