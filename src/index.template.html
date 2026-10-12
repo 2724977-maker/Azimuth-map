@@ -947,6 +947,32 @@
         }
         .leaflet-control-attribution a { color: var(--muted) !important; }
         .leaflet-control-scale { margin-left: 14px !important; margin-bottom: 8px !important; }
+        /* Підпис джерела мапи сховано за кнопкою «i»: показується на кілька секунд після натиску. */
+        .leaflet-control-attribution {
+            opacity: 0;
+            pointer-events: none;
+            transform: translateY(6px);
+            transition: opacity 0.25s, transform 0.25s;
+            border-radius: 10px 0 0 0;
+        }
+        .attrib-open .leaflet-control-attribution { opacity: 1; pointer-events: auto; transform: none; }
+        .attrib-btn {
+            margin-left: 14px !important;
+            margin-bottom: 4px !important;
+            width: 24px; height: 24px;
+            border-radius: 50%;
+            background: var(--surface);
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            border: 0.5px solid var(--line);
+            color: var(--muted);
+            font: italic 700 13px Georgia, "Times New Roman", serif;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer;
+        }
+        .attrib-open .attrib-btn { color: var(--accent); }
+        .layers-attrib { margin: 6px 8px 2px; font-size: 0.68rem; line-height: 1.4; color: var(--muted); }
+        .layers-attrib a { color: inherit; }
         .leaflet-control-scale-line {
             background: var(--surface) !important;
             border-color: var(--ink) !important;
@@ -1224,6 +1250,7 @@
 <div class="layers-pop glass" id="layersPop" hidden role="radiogroup" aria-label="Шар мапи">
     <div class="eyebrow">Шар мапи</div>
     <div id="layerOptions"></div>
+    <div class="layers-attrib" id="layersAttrib"></div>
     <div class="look-box">
         <div class="eyebrow">Вигляд мапи</div>
         <div class="seg" id="lookSeg" role="radiogroup" aria-label="Вигляд мапи">
@@ -1874,6 +1901,27 @@
 
     L.control.scale({ imperial: false, position: 'bottomleft', maxWidth: 110 }).addTo(map);
     map.attributionControl.setPrefix('<a href="https://leafletjs.com" target="_blank" rel="noopener">Leaflet</a>');
+
+    // Джерела даних мапи (вимога ліцензій OpenStreetMap і Visicom) — за кнопкою «i», а не постійним рядком.
+    var attribTimer = null;
+    var AttribButton = L.Control.extend({
+        options: { position: 'bottomleft' },
+        onAdd: function () {
+            var b = L.DomUtil.create('button', 'attrib-btn');
+            b.type = 'button';
+            b.textContent = 'i';
+            b.setAttribute('aria-label', 'Джерела даних мапи');
+            L.DomEvent.disableClickPropagation(b);
+            L.DomEvent.on(b, 'click', function () {
+                var open = !document.body.classList.contains('attrib-open');
+                document.body.classList.toggle('attrib-open', open);
+                clearTimeout(attribTimer);
+                if (open) attribTimer = setTimeout(function () { document.body.classList.remove('attrib-open'); }, 5000);
+            });
+            return b;
+        }
+    });
+    new AttribButton().addTo(map);
 
     var sectorsLayer = L.layerGroup().addTo(map);
     var previewLayer = L.layerGroup().addTo(map);
@@ -3321,6 +3369,11 @@
         toast('Ключ Visicom збережено');
     });
 
+    function renderLayersAttrib() {
+        var box = document.getElementById('layersAttrib');
+        box.innerHTML = 'Дані мапи: ' + (LAYERS[state.layer].layer.getAttribution() || '');
+    }
+
     function closeLayers() {
         el.layersPop.hidden = true;
         el.layerBtn.setAttribute('aria-expanded', 'false');
@@ -3331,6 +3384,7 @@
         if (open) {
             closePanels();
             renderLayerOptions();
+            renderLayersAttrib();
             renderVisicomKey();
         }
         el.layersPop.hidden = !open;
