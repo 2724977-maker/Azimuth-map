@@ -1046,6 +1046,20 @@
             touch-action: none;
         }
 
+        .sound-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin-top: 6px;
+            padding: 10px 8px 6px;
+            border-top: 1px solid var(--line);
+            font-size: 0.86rem;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .sound-row input { width: 22px; height: 22px; accent-color: var(--accent); flex-shrink: 0; }
+
         /* ---------- Швидкі значення за контекстом ---------- */
         .preset-switch {
             flex-shrink: 0;
@@ -1397,6 +1411,10 @@
     <div id="layerOptions"></div>
     <div class="layers-attrib" id="layersAttrib"></div>
     <div class="layers-attrib">Версія застосунку: <span class="num">__BUILD__</span></div>
+    <label class="sound-row" for="soundToggle">
+        <span>Звук прокрутки компаса</span>
+        <input type="checkbox" switch id="soundToggle">
+    </label>
     <div class="look-box">
         <div class="eyebrow">Вигляд мапи</div>
         <div class="seg" id="lookSeg" role="radiogroup" aria-label="Вигляд мапи">
@@ -1598,6 +1616,7 @@
                 detent: state.detent,
                 azMode: state.azMode,
                 mapLook: state.mapLook,
+                sound: state.sound,
                 inputs: { az: el.azInput.value, dist: el.distInput.value, width: el.widthInput.value },
                 view: { center: [c.lat, c.lng], zoom: map.getZoom() }
             }));
@@ -1856,6 +1875,7 @@
         editColor: null,
         azMode: saved.azMode === 'mag' ? 'mag' : 'true',
         mapLook: ['auto', 'light', 'dark', 'night'].indexOf(saved.mapLook) >= 0 ? saved.mapLook : 'auto',
+        sound: saved.sound !== false,
         presetGroup: 'dist',
         tool: null,
         ruler: { a: null, b: null },
@@ -1983,6 +2003,18 @@
             b.setAttribute('aria-checked', String(on));
         });
     }
+
+    var soundToggle = document.getElementById('soundToggle');
+    soundToggle.checked = state.sound;
+    soundToggle.addEventListener('change', function () {
+        state.sound = soundToggle.checked;
+        saveState();
+        if (state.sound) {
+            getAudio();
+            setTimeout(function () { tickSound(0); }, 30);
+        }
+        toast(state.sound ? 'Звук прокрутки увімкнено' : 'Звук прокрутки вимкнено');
+    });
 
     if (darkScheme) {
         if (darkScheme.addEventListener) darkScheme.addEventListener('change', applyMapLook);
@@ -2299,11 +2331,65 @@
         return label;
     }
 
-    // Клацання на кожному градусі під час обертання компаса.
+    /* ---- Звук «тріскачки» (Web Audio, без файлів) ---- */
+    var audioCtx = null;
+    var lastSound = 0;
+
+    function getAudio() {
+        if (!state.sound) return null;
+        var AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return null;
+        if (!audioCtx) {
+            // «ambient»: звук змішується з музикою й не перериває її (і, як системні звуки, вимикається
+            // перемикачем беззвучного режиму на iPhone).
+            try { if (navigator.audioSession) navigator.audioSession.type = 'ambient'; } catch (e) { /* ignore */ }
+            try { audioCtx = new AC(); } catch (e) { return null; }
+        }
+        if (audioCtx.state === 'suspended') audioCtx.resume().catch(function () {});
+        return audioCtx;
+    }
+
+    // Safari дозволяє звук лише після дотику — «розблоковуємо» його першим же натиском будь-де.
+    ['touchend', 'pointerup', 'keydown'].forEach(function (ev) {
+        document.addEventListener(ev, function unlock() {
+            var ctx = getAudio();
+            if (ctx && ctx.state === 'running') document.removeEventListener(ev, unlock, true);
+        }, true);
+    });
+
+    // Тихе клацання на кожному градусі, нижчий тон кожні 10°, глухий «тук» на сторонах світу.
+    function tickSound(deg) {
+        var ctx = getAudio();
+        if (!ctx || ctx.state !== 'running') return;
+        var now = Date.now();
+        if (now - lastSound < 18) return;
+        lastSound = now;
+        var cardinal = deg % 90 === 0, ten = deg % 10 === 0;
+        var t = ctx.currentTime;
+        var osc = ctx.createOscillator();
+        var gain = ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(cardinal ? 820 : ten ? 1250 : 2100, t);
+        osc.frequency.exponentialRampToValueAtTime(cardinal ? 520 : ten ? 900 : 1500, t + 0.03);
+        var peak = cardinal ? 0.32 : ten ? 0.2 : 0.11;
+        var len = cardinal ? 0.07 : ten ? 0.04 : 0.025;
+        gain.gain.setValueAtTime(0.0001, t);
+        gain.gain.exponentialRampToValueAtTime(peak, t + 0.002);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + len);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(t);
+        osc.stop(t + len + 0.01);
+    }
+
+    // Клацання (вібрація + звук) на кожному градусі під час обертання компаса.
     var lastDetent = null;
     function dialTick(az) {
         var detent = Math.round(normAz(az)) % 360;
-        if (lastDetent !== null && detent !== lastDetent) haptic();
+        if (lastDetent !== null && detent !== lastDetent) {
+            haptic();
+            tickSound(detent);
+        }
         lastDetent = detent;
     }
 
@@ -2315,6 +2401,7 @@
         el.dial.classList.add('dragging');
         try { dialWrap.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
         var az = dialAngle(e);
+        getAudio();
         lastDetent = null;
         dialTick(az);
         if (!dialOverlay) haptic(); // з перемикачем під пальцем відгук дасть сам дотик
@@ -2410,7 +2497,9 @@
     function nudgeAz(step, silent) {
         var cur = toNum(el.azInput.value);
         if (!silent) haptic();
-        setAzimuth((isNum(cur) ? cur : 0) + step);
+        var next = normAz((isNum(cur) ? cur : 0) + step);
+        tickSound(Math.round(next) % 360);
+        setAzimuth(next);
     }
 
     // Натиск — ±1°, утримання — швидке прокручування.
