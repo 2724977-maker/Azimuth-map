@@ -1025,6 +1025,27 @@
         .nudge-btn:active { transform: scale(0.9); background: var(--accent-soft); color: var(--accent); }
         .sheet.compact .nudge { display: none; }
 
+        /* ---------- Тактильний відгук на iPhone: справжній системний перемикач під пальцем ---------- */
+        .hap-host { position: relative; display: inline-flex; }
+        .haptic-overlay {
+            position: absolute;
+            top: 0; right: 0; bottom: 0; left: 0;
+            z-index: 2;
+            border-radius: 50%;
+            overflow: hidden;
+            touch-action: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .haptic-overlay input {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            margin: 0;
+            opacity: 0.011;
+            cursor: pointer;
+            touch-action: none;
+        }
+
         /* ---------- Швидкі значення за контекстом ---------- */
         .preset-switch {
             flex-shrink: 0;
@@ -2235,7 +2256,6 @@
        Android: navigator.vibrate. iPhone (Safari не має vibrate): натиск на системний перемикач
        <input type="checkbox" switch> дає легкий відгук Taptic Engine (iOS 18+). */
     var IS_IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-    var hapticSwitch = null;
     var lastHaptic = 0;
 
     function haptic() {
@@ -2247,18 +2267,36 @@
             return;
         }
         if (!IS_IOS) return;
-        if (!hapticSwitch) {
-            hapticSwitch = document.createElement('label');
-            hapticSwitch.setAttribute('aria-hidden', 'true');
-            hapticSwitch.style.cssText = 'position:fixed;left:-200px;top:0;width:1px;height:1px;opacity:0;pointer-events:none;overflow:hidden';
+        // Програмний «клік» по перемикачу дає відгук на iOS 17.4–26.4; в iOS 26.5 Apple це закрила.
+        try {
+            var label = document.createElement('label');
+            label.setAttribute('aria-hidden', 'true');
+            label.style.display = 'none';
             var input = document.createElement('input');
             input.type = 'checkbox';
             input.setAttribute('switch', '');
-            input.tabIndex = -1;
-            hapticSwitch.appendChild(input);
-            document.body.appendChild(hapticSwitch);
-        }
-        hapticSwitch.click();
+            label.appendChild(input);
+            document.head.appendChild(label);
+            label.click();
+            document.head.removeChild(label);
+        } catch (e) { /* ignore */ }
+    }
+
+    // На новіших iOS відгук дає лише справжній дотик до системного перемикача, тому кладемо
+    // прозорий перемикач поверх кнопки чи компаса: торкання вмикає його — і телефон клацає.
+    function addHapticOverlay(host) {
+        if (!IS_IOS) return null;
+        var label = document.createElement('label');
+        label.className = 'haptic-overlay';
+        label.setAttribute('aria-hidden', 'true');
+        var input = document.createElement('input');
+        input.type = 'checkbox';
+        input.setAttribute('switch', '');
+        input.tabIndex = -1;
+        label.appendChild(input);
+        label.addEventListener('click', function (e) { e.stopPropagation(); });
+        host.appendChild(label);
+        return label;
     }
 
     // Клацання кожні 5° під час обертання компаса.
@@ -2270,18 +2308,20 @@
     }
 
     var dialDrag = false;
-    el.dial.addEventListener('pointerdown', function (e) {
+    var dialWrap = el.dial.parentNode;
+    var dialOverlay = addHapticOverlay(dialWrap);
+    dialWrap.addEventListener('pointerdown', function (e) {
         dialDrag = true;
         el.dial.classList.add('dragging');
-        try { el.dial.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+        try { dialWrap.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
         var az = dialAngle(e);
         lastDetent = null;
         dialTick(az);
-        haptic();
+        if (!dialOverlay) haptic(); // з перемикачем під пальцем відгук дасть сам дотик
         setAzimuth(az);
-        e.preventDefault();
+        if (!dialOverlay) e.preventDefault();
     });
-    el.dial.addEventListener('pointermove', function (e) {
+    dialWrap.addEventListener('pointermove', function (e) {
         if (!dialDrag) return;
         var az = dialAngle(e);
         dialTick(az);
@@ -2291,8 +2331,8 @@
         dialDrag = false;
         el.dial.classList.remove('dragging');
     }
-    el.dial.addEventListener('pointerup', endDrag);
-    el.dial.addEventListener('pointercancel', endDrag);
+    dialWrap.addEventListener('pointerup', endDrag);
+    dialWrap.addEventListener('pointercancel', endDrag);
     el.dial.addEventListener('keydown', function (e) {
         var cur = toNum(el.azInput.value);
         if (!isNum(cur)) cur = 0;
@@ -2367,9 +2407,9 @@
     el.widthInput.addEventListener('focus', function () { setPresetGroup('width'); });
 
     /* ================= Fine azimuth adjustment ================= */
-    function nudgeAz(step) {
+    function nudgeAz(step, silent) {
         var cur = toNum(el.azInput.value);
-        haptic();
+        if (!silent) haptic();
         setAzimuth((isNum(cur) ? cur : 0) + step);
     }
 
@@ -2377,21 +2417,30 @@
     Array.prototype.forEach.call(document.querySelectorAll('.nudge-btn'), function (b) {
         var step = Number(b.getAttribute('data-step'));
         var delay = null, repeat = null;
+        var host = document.createElement('span');
+        host.className = 'hap-host';
+        b.parentNode.insertBefore(host, b);
+        host.appendChild(b);
+        var overlay = addHapticOverlay(host);
         function stop() {
             clearTimeout(delay);
             clearInterval(repeat);
             delay = repeat = null;
         }
-        b.addEventListener('pointerdown', function (e) {
-            e.preventDefault();
+        host.addEventListener('pointerdown', function (e) {
+            if (!overlay) e.preventDefault();
             stop();
-            nudgeAz(step);
+            nudgeAz(step, !!overlay); // з перемикачем перший відгук дає сам дотик
             delay = setTimeout(function () { repeat = setInterval(function () { nudgeAz(step); }, 70); }, 380);
         });
-        ['pointerup', 'pointerleave', 'pointercancel'].forEach(function (ev) { b.addEventListener(ev, stop); });
-        b.addEventListener('click', function (e) {
-            e.preventDefault();
-            if (e.detail === 0) nudgeAz(step); // активація з клавіатури
+        ['pointerup', 'pointerleave', 'pointercancel'].forEach(function (ev) { host.addEventListener(ev, stop); });
+        b.addEventListener('click', function (e) { e.preventDefault(); });
+        // З клавіатури: Enter або пробіл.
+        b.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                nudgeAz(step);
+            }
         });
     });
 
