@@ -2040,7 +2040,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
     <div class="eyebrow">Шар мапи</div>
     <div id="layerOptions"></div>
     <div class="layers-attrib" id="layersAttrib"></div>
-    <div class="layers-attrib">Версія застосунку: <span class="num">1337343b1679</span></div>
+    <div class="layers-attrib">Версія застосунку: <span class="num">b6418b0f4631</span></div>
     <div class="look-box">
         <div class="eyebrow">Вигляд мапи</div>
         <div class="seg" id="lookSeg" role="radiogroup" aria-label="Вигляд мапи">
@@ -2896,16 +2896,61 @@ svg.leaflet-image-layer.leaflet-interactive path {
         return normAz(Math.round(toDeg(Math.atan2(x, -y))));
     }
 
+    /* ---- Тактильний відгук ----
+       Android: navigator.vibrate. iPhone (Safari не має vibrate): натиск на системний перемикач
+       <input type="checkbox" switch> дає легкий відгук Taptic Engine (iOS 18+). */
+    var IS_IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    var hapticSwitch = null;
+    var lastHaptic = 0;
+
+    function haptic() {
+        var now = Date.now();
+        if (now - lastHaptic < 35) return; // не частіше ~28 разів на секунду
+        lastHaptic = now;
+        if (typeof navigator.vibrate === 'function' && !IS_IOS) {
+            try { navigator.vibrate(8); } catch (e) { /* ignore */ }
+            return;
+        }
+        if (!IS_IOS) return;
+        if (!hapticSwitch) {
+            hapticSwitch = document.createElement('label');
+            hapticSwitch.setAttribute('aria-hidden', 'true');
+            hapticSwitch.style.cssText = 'position:fixed;left:-200px;top:0;width:1px;height:1px;opacity:0;pointer-events:none;overflow:hidden';
+            var input = document.createElement('input');
+            input.type = 'checkbox';
+            input.setAttribute('switch', '');
+            input.tabIndex = -1;
+            hapticSwitch.appendChild(input);
+            document.body.appendChild(hapticSwitch);
+        }
+        hapticSwitch.click();
+    }
+
+    // Клацання кожні 5° під час обертання компаса.
+    var lastDetent = null;
+    function dialTick(az) {
+        var detent = Math.floor(normAz(az + 2.5) / 5);
+        if (lastDetent !== null && detent !== lastDetent) haptic();
+        lastDetent = detent;
+    }
+
     var dialDrag = false;
     el.dial.addEventListener('pointerdown', function (e) {
         dialDrag = true;
         el.dial.classList.add('dragging');
         try { el.dial.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
-        setAzimuth(dialAngle(e));
+        var az = dialAngle(e);
+        lastDetent = null;
+        dialTick(az);
+        haptic();
+        setAzimuth(az);
         e.preventDefault();
     });
     el.dial.addEventListener('pointermove', function (e) {
-        if (dialDrag) setAzimuth(dialAngle(e));
+        if (!dialDrag) return;
+        var az = dialAngle(e);
+        dialTick(az);
+        setAzimuth(az);
     });
     function endDrag() {
         dialDrag = false;
@@ -2989,6 +3034,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
     /* ================= Fine azimuth adjustment ================= */
     function nudgeAz(step) {
         var cur = toNum(el.azInput.value);
+        haptic();
         setAzimuth((isNum(cur) ? cur : 0) + step);
     }
 
