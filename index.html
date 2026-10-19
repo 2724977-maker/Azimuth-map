@@ -1723,6 +1723,108 @@ svg.leaflet-image-layer.leaflet-interactive path {
             }
         }
 
+        /* ---------- Адреса станції ---------- */
+        .station-coords { font-family: var(--font-num); font-size: 0.72rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .station.has-address .station-value { font-family: var(--font-ui); font-size: 0.9rem; }
+
+        /* ---------- Редагування сектора ---------- */
+        .edit-bar { display: grid; gap: 8px; margin-bottom: 8px; }
+        .edit-head { display: flex; align-items: center; gap: 8px; }
+        .edit-head .eyebrow { color: var(--accent); flex: 1; }
+        .edit-head .chip { height: 30px; }
+        .name-input {
+            width: 100%;
+            height: 40px;
+            padding: 0 12px;
+            border-radius: 12px;
+            border: 1.5px solid transparent;
+            background: var(--fill);
+            color: var(--ink);
+            font: 600 16px var(--font-ui);
+            outline: 0;
+            -webkit-user-select: text;
+            user-select: text;
+        }
+        .name-input:focus { border-color: var(--accent); background: var(--accent-soft); }
+        .color-row { display: flex; gap: 8px; }
+        .color-dot {
+            width: 28px; height: 28px;
+            border-radius: 50%;
+            border: 3px solid var(--surface-solid);
+            box-shadow: 0 0 0 1px var(--line);
+        }
+        .color-dot.on { box-shadow: 0 0 0 2px var(--ink); }
+        .sheet.editing .cta { background: var(--accent); color: var(--accent-ink); }
+
+        /* ---------- Шторка з трьома положеннями ---------- */
+        .sheet.mini .instrument { display: none; }
+        .sheet.mini .station { margin-bottom: 6px; }
+        .sheet.dragging { transition: none !important; }
+        .grabber { touch-action: none; cursor: grab; }
+        .station { touch-action: none; }
+
+        /* ---------- Список секторів: свайп і довге натискання ---------- */
+        .sector-item { display: block; padding: 0; position: relative; overflow: hidden; }
+        .swipe-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 8px;
+            position: relative;
+            border-radius: var(--r-md);
+            touch-action: pan-y;
+            transition: transform 0.25s var(--ease);
+        }
+        .sector-item.swiping .swipe-row { background: var(--surface-solid); transition: none; }
+        .swipe-bg {
+            position: absolute;
+            top: 0; right: 0; bottom: 0; left: 0;
+            display: flex; align-items: center; justify-content: flex-end;
+            padding-right: 22px;
+            border-radius: var(--r-md);
+            background: var(--danger-soft);
+            color: var(--danger);
+            font-weight: 800;
+            font-size: 0.82rem;
+            gap: 6px;
+            opacity: 0;
+        }
+        .sector-item.swiping .swipe-bg { opacity: 1; }
+        .sector-item.armed .swipe-bg { background: var(--danger); color: #ffffff; }
+        .sector-name { font-weight: 800; font-size: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+        .sector-title { min-width: 0; }
+        @media (hover: none) { .sector-actions .del-btn { display: none; } }
+
+        /* ---------- Підписи секторів без накладань ---------- */
+        .map-label { transition: opacity 0.2s; }
+        .map-label.lbl-hidden { opacity: 0; }
+
+        /* ---------- Моє місцезнаходження ---------- */
+        .me { position: absolute; left: -45px; top: -45px; width: 90px; height: 90px; pointer-events: none; }
+        .me-cone {
+            position: absolute;
+            top: 0; right: 0; bottom: 0; left: 0;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(47, 107, 255, 0.55) 0%, rgba(47, 107, 255, 0.25) 45%, rgba(47, 107, 255, 0) 70%);
+            clip-path: polygon(50% 50%, 22% 0, 78% 0);
+            transition: transform 0.15s linear;
+        }
+        .me-halo {
+            position: absolute;
+            left: 33px; top: 33px; width: 24px; height: 24px;
+            border-radius: 50%;
+            background: rgba(47, 107, 255, 0.35);
+            animation: pulse 2s ease-out infinite;
+        }
+        .me-dot {
+            position: absolute;
+            left: 36px; top: 36px; width: 18px; height: 18px;
+            border-radius: 50%;
+            background: #2f6bff;
+            border: 3px solid #ffffff;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+        }
+
         /* ---------- Компактніші розміри: більше місця для мапи ---------- */
         .searchbar, .sectors-btn { height: 50px; }
         .sectors-btn { min-width: 50px; }
@@ -1930,7 +2032,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
     <div class="eyebrow">Шар мапи</div>
     <div id="layerOptions"></div>
     <div class="layers-attrib" id="layersAttrib"></div>
-    <div class="layers-attrib">Версія застосунку: <span class="num">df697cf30ea0</span></div>
+    <div class="layers-attrib">Версія застосунку: <span class="num">6bec877e382b</span></div>
     <div class="look-box">
         <div class="eyebrow">Вигляд мапи</div>
         <div class="seg" id="lookSeg" role="radiogroup" aria-label="Вигляд мапи">
@@ -1960,6 +2062,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
         <div class="station-info">
             <span class="eyebrow">Базова станція</span>
             <span class="station-value" id="pointText">Торкніться мапи, щоб обрати точку</span>
+            <span class="station-coords num" id="pointCoords" hidden></span>
         </div>
         <button class="round-btn solid" type="button" id="copyPointBtn" aria-label="Копіювати координати" hidden>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="3"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>
@@ -1970,6 +2073,14 @@ svg.leaflet-image-layer.leaflet-interactive path {
     </div>
 
     <form id="sectorForm" autocomplete="off">
+        <div class="edit-bar" id="editBar" hidden>
+            <div class="edit-head">
+                <span class="eyebrow">Редагування сектора</span>
+                <button class="chip" type="button" id="editCancel">Скасувати</button>
+            </div>
+            <input class="name-input" type="text" id="nameInput" maxlength="40" placeholder="Назва, напр. «БС-12 / сектор 2»" aria-label="Назва сектора">
+            <div class="color-row" id="colorRow" role="radiogroup" aria-label="Колір сектора"></div>
+        </div>
         <div class="instrument">
             <div class="dial-wrap">
                 <svg class="dial" id="dial" viewBox="-100 -100 200 200" role="slider" tabindex="0"
@@ -2027,7 +2138,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 
         <button class="cta" type="submit" id="addBtn" disabled>
             <span class="swatch" id="nextSwatch"></span>
-            Встановити сектор
+            <span id="ctaText">Встановити сектор</span>
         </button>
     </form>
 </footer>
@@ -2057,6 +2168,8 @@ svg.leaflet-image-layer.leaflet-interactive path {
     // API-ключ Visicom Tiles (https://api.visicom.ua). Якщо вписати його сюди, мапа Візіком
     // працюватиме без напису про обмеження для всіх. Інакше ключ можна ввести в меню шарів.
     var VISICOM_KEY = 'f323d025e752fd0ac6e6e8cd67b990fa';
+    // Ключ Visicom Data API — для адреси обраної станції (зворотне геокодування).
+    var VISICOM_DATA_KEY = '7d6d0b7fbe2a45d907452f3b84ce279a';
     // Ключі, які не відкривають тайли Visicom (недійсний і ключ Data API): якщо такий збережено
     // на пристрої, використовуємо ключ сайту.
     var RETIRED_VISICOM_KEYS = ['10a038764897fc6b39e4fa897a30675a', '7d6d0b7fbe2a45d907452f3b84ce279a'];
@@ -2092,6 +2205,8 @@ svg.leaflet-image-layer.leaflet-interactive path {
         dialNeedleLine: $('dialNeedleLine'), dialNeedleTip: $('dialNeedleTip'), dialHub: $('dialHub'),
         presets: $('presets'), nextSwatch: $('nextSwatch'), addBtn: $('addBtn'),
         tileNotice: $('tileNotice'), toast: $('toast'),
+        pointCoords: $('pointCoords'), editBar: $('editBar'), editCancel: $('editCancel'),
+        nameInput: $('nameInput'), colorRow: $('colorRow'), ctaText: $('ctaText'),
         azModeBtn: $('azModeBtn'), azLabel: $('azLabel'), declLine: $('declLine'), rulerBtn: $('rulerBtn'), infoCard: $('infoCard'),
         bearingBtn: $('bearingBtn'), selectBar: $('selectBar'), selectHint: $('selectHint'),
         selectCancel: $('selectCancel'), selectFind: $('selectFind')
@@ -2116,7 +2231,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
                 layer: state.layer,
                 layerVersion: LAYER_PREF_VERSION,
                 visicomKey: state.visicomKey === VISICOM_KEY ? '' : state.visicomKey,
-                compact: state.compact,
+                detent: state.detent,
                 azMode: state.azMode,
                 mapLook: state.mapLook,
                 inputs: { az: el.azInput.value, dist: el.distInput.value, width: el.widthInput.value },
@@ -2372,7 +2487,9 @@ svg.leaflet-image-layer.leaflet-interactive path {
         layer: saved.layerVersion === LAYER_PREF_VERSION && saved.layer ? saved.layer : 'visicom',
         visicomKey: typeof saved.visicomKey === 'string' && saved.visicomKey
             && RETIRED_VISICOM_KEYS.indexOf(saved.visicomKey) < 0 ? saved.visicomKey : VISICOM_KEY,
-        compact: !!saved.compact,
+        detent: ['full', 'mid', 'mini'].indexOf(saved.detent) >= 0 ? saved.detent : (saved.compact ? 'mid' : 'full'),
+        editingId: null,
+        editColor: null,
         azMode: saved.azMode === 'mag' ? 'mag' : 'true',
         mapLook: ['auto', 'light', 'dark', 'night'].indexOf(saved.mapLook) >= 0 ? saved.mapLook : 'auto',
         presetGroup: 'dist',
@@ -2392,6 +2509,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
     el.widthInput.value = pick(savedInputs.width, 60);
 
     function nextColor() { return COLORS[state.colorSeq % COLORS.length]; }
+    function currentColor() { return state.editingId ? state.editColor : nextColor(); }
 
     /* ================= Map ================= */
     var startView = saved.view && Array.isArray(saved.view.center)
@@ -2606,7 +2724,6 @@ svg.leaflet-image-layer.leaflet-interactive path {
     var sectorsLayer = L.layerGroup().addTo(map);
     var previewLayer = L.layerGroup().addTo(map);
     var pickMarker = null;
-    var locateCircle = null;
 
     /* ================= UI helpers ================= */
     var toastTimer = null;
@@ -2742,7 +2859,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
     })();
 
     function renderDial(v) {
-        var color = nextColor();
+        var color = currentColor();
         var az = v.inputAz == null ? 0 : v.inputAz;
         el.dialNeedle.setAttribute('transform', 'rotate(' + az + ')');
         el.dialNeedle.style.opacity = v.inputAz == null ? 0.25 : 1;
@@ -2919,6 +3036,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
         if (e.key !== 'Escape') return;
         if (!el.layersPop.hidden) closeLayers();
         else if (state.tool === 'ruler') setRuler(false);
+        else if (state.editingId) exitEdit();
         else if (!el.listPanel.hidden || !el.searchPanel.hidden) {
             closePanels();
             el.searchInput.blur();
@@ -3015,34 +3133,71 @@ svg.leaflet-image-layer.leaflet-interactive path {
             : 'Істинний (географічний) азимут');
     });
 
-    /* ================= Sheet compact mode ================= */
-    function applyCompact() {
-        el.sheet.classList.toggle('compact', state.compact);
-        el.grabber.setAttribute('aria-expanded', String(!state.compact));
+    /* ================= Sheet: three positions, drag to resize ================= */
+    var DETENTS = ['mini', 'mid', 'full'];
+
+    function applyDetent() {
+        el.sheet.classList.toggle('compact', state.detent !== 'full');
+        el.sheet.classList.toggle('mini', state.detent === 'mini');
+        el.grabber.setAttribute('aria-expanded', String(state.detent === 'full'));
         updateSheetHeight();
     }
-    el.grabber.addEventListener('click', function () {
-        state.compact = !state.compact;
-        applyCompact();
+
+    // Плавний перехід між положеннями: запам'ятовуємо, де була панель, і анімуємо до нового місця.
+    function setDetent(detent) {
+        if (DETENTS.indexOf(detent) < 0) return;
+        var before = el.sheet.getBoundingClientRect().top;
+        el.sheet.classList.add('dragging');
+        el.sheet.style.transform = '';
+        state.detent = detent;
+        applyDetent();
+        var after = el.sheet.getBoundingClientRect().top;
+        el.sheet.style.transform = 'translateY(' + (before - after) + 'px)';
+        void el.sheet.offsetHeight;
+        el.sheet.classList.remove('dragging');
+        el.sheet.style.transform = '';
         saveState();
-    });
-    (function swipeGrabber() {
-        var startY = null;
-        el.sheet.addEventListener('touchstart', function (e) {
-            var t = e.target;
-            if (t === el.grabber || t === el.station || el.station.contains(t)) startY = e.touches[0].clientY;
-            else startY = null;
-        }, { passive: true });
-        el.sheet.addEventListener('touchend', function (e) {
+    }
+
+    (function sheetDrag() {
+        var startY = null, dy = 0, dragging = false, suppressClick = false;
+        function down(e) {
+            if (e.target !== el.grabber && e.target.closest('button')) return;
+            startY = e.clientY;
+            dy = 0;
+            dragging = false;
+        }
+        el.grabber.addEventListener('pointerdown', down);
+        el.station.addEventListener('pointerdown', down);
+        document.addEventListener('pointermove', function (e) {
             if (startY == null) return;
-            var dy = e.changedTouches[0].clientY - startY;
-            if (Math.abs(dy) > 30) {
-                state.compact = dy > 0;
-                applyCompact();
-                saveState();
+            dy = e.clientY - startY;
+            if (!dragging && Math.abs(dy) > 6) {
+                dragging = true;
+                el.sheet.classList.add('dragging');
             }
+            // Вгору панель тягнеться з опором, вниз — за пальцем.
+            if (dragging) el.sheet.style.transform = 'translateY(' + (dy < 0 ? dy * 0.35 : dy) + 'px)';
+        });
+        function up() {
+            if (startY == null) return;
             startY = null;
-        }, { passive: true });
+            if (!dragging) return;
+            suppressClick = true;
+            var i = DETENTS.indexOf(state.detent);
+            var step = dy > 150 ? -2 : dy > 40 ? -1 : dy < -150 ? 2 : dy < -40 ? 1 : 0;
+            el.sheet.classList.remove('dragging');
+            setDetent(DETENTS[Math.max(0, Math.min(2, i + step))]);
+            setTimeout(function () { suppressClick = false; }, 50);
+        }
+        document.addEventListener('pointerup', up);
+        document.addEventListener('pointercancel', up);
+        // Натиск на смужку: повна → поля → лише кнопка → повна.
+        el.grabber.addEventListener('click', function () {
+            if (suppressClick) return;
+            var order = { full: 'mid', mid: 'mini', mini: 'full' };
+            setDetent(order[state.detent]);
+        });
     })();
 
     /* ================= Point selection ================= */
@@ -3062,7 +3217,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
         var pickEl = root.querySelector('.pick');
         var needle = root.querySelector('.pick-needle');
         var bubble = root.querySelector('.pick-bubble');
-        pickEl.style.setProperty('--pick-color', nextColor());
+        pickEl.style.setProperty('--pick-color', currentColor());
         if (v.az == null) {
             needle.hidden = true;
             bubble.textContent = '—';
@@ -3073,13 +3228,58 @@ svg.leaflet-image-layer.leaflet-interactive path {
         }
     }
 
+    /* ---- Адреса станції (Visicom Data API) ---- */
+    var addressCache = {};
+    var addressTimer = null;
+    var addressSeq = 0;
+
+    function shortStreet(p) {
+        var street = String(p.street || '').replace(/\s*\([^)]*\)/g, '').trim();
+        if (!street) return '';
+        var parts = [(p.street_type ? p.street_type + ' ' : '') + street];
+        if (p.name) parts.push(p.name);
+        if (p.settlement) parts.push(p.settlement);
+        return parts.join(', ');
+    }
+
+    function showStation(lat, lng, address) {
+        el.station.classList.toggle('has-address', !!address);
+        el.pointText.textContent = address || fmtLatLng(lat, lng);
+        el.pointCoords.hidden = !address;
+        el.pointCoords.textContent = fmtLatLng(lat, lng);
+    }
+
+    function lookupAddress(lat, lng) {
+        clearTimeout(addressTimer);
+        var key = lat.toFixed(4) + ',' + lng.toFixed(4);
+        if (addressCache[key] !== undefined) {
+            showStation(lat, lng, addressCache[key]);
+            return;
+        }
+        showStation(lat, lng, null);
+        if (!VISICOM_DATA_KEY || !navigator.onLine) return;
+        var seq = ++addressSeq;
+        addressTimer = setTimeout(function () {
+            var url = 'https://api.visicom.ua/data-api/5.0/uk/geocode.json?categories=adr_address&near=' +
+                lng.toFixed(6) + ',' + lat.toFixed(6) + '&r=80&l=1&key=' + VISICOM_DATA_KEY;
+            fetch(url).then(function (res) { return res.ok ? res.json() : {}; }).then(function (data) {
+                var addr = data && data.properties ? shortStreet(data.properties) : '';
+                addressCache[key] = addr || '';
+                // Показуємо, лише якщо станцію за цей час не перенесли.
+                if (seq === addressSeq && state.selected && Math.abs(state.selected.lat - lat) < 1e-6 && Math.abs(state.selected.lng - lng) < 1e-6) {
+                    showStation(lat, lng, addr);
+                }
+            }).catch(function () { /* без мережі лишаємо координати */ });
+        }, 350);
+    }
+
     function selectPoint(latlng) {
         var lat = latlng.lat;
         var lng = L.Util.wrapNum(latlng.lng, [-180, 180], true);
         state.selected = { lat: lat, lng: lng };
 
         el.station.classList.add('has-point');
-        el.pointText.textContent = fmtLatLng(lat, lng);
+        lookupAddress(lat, lng);
         el.copyPointBtn.hidden = false;
         el.clearPointBtn.hidden = false;
 
@@ -3092,13 +3292,16 @@ svg.leaflet-image-layer.leaflet-interactive path {
                 autoPan: true,
                 keyboard: false,
                 zIndexOffset: 1000,
-                icon: L.divIcon({ className: 'pick-icon', html: pickIconHtml(v.az, nextColor()), iconSize: [72, 72], iconAnchor: [36, 36] })
+                icon: L.divIcon({ className: 'pick-icon', html: pickIconHtml(v.az, currentColor()), iconSize: [72, 72], iconAnchor: [36, 36] })
             }).addTo(map);
             pickMarker.on('drag', function (e) {
                 var p = e.target.getLatLng();
                 state.selected = { lat: p.lat, lng: L.Util.wrapNum(p.lng, [-180, 180], true) };
-                el.pointText.textContent = fmtLatLng(state.selected.lat, state.selected.lng);
+                showStation(state.selected.lat, state.selected.lng, null);
                 renderPreview(readInputs());
+            });
+            pickMarker.on('dragend', function () {
+                if (state.selected) lookupAddress(state.selected.lat, state.selected.lng);
             });
         }
         refreshForm();
@@ -3111,8 +3314,10 @@ svg.leaflet-image-layer.leaflet-interactive path {
             pickMarker = null;
         }
         previewLayer.clearLayers();
-        el.station.classList.remove('has-point');
+        if (state.editingId) exitEdit();
+        el.station.classList.remove('has-point', 'has-address');
         el.pointText.textContent = 'Торкніться мапи, щоб обрати точку';
+        el.pointCoords.hidden = true;
         el.copyPointBtn.hidden = true;
         el.clearPointBtn.hidden = true;
         el.addBtn.disabled = true;
@@ -3141,7 +3346,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
     function renderPreview(v) {
         previewLayer.clearLayers();
         if (!state.selected || !v.valid) return;
-        var color = nextColor();
+        var color = currentColor();
         var s = { origin: [state.selected.lat, state.selected.lng], az: v.az, dist: v.dist, width: v.width };
         var shape = sectorShape(s);
         if (shape.polygon) {
@@ -3191,7 +3396,96 @@ svg.leaflet-image-layer.leaflet-interactive path {
     el.sectorForm.addEventListener('submit', function (e) {
         e.preventDefault();
         if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
-        addSector();
+        if (state.editingId) saveEdit();
+        else addSector();
+    });
+
+    /* ---- Редагування сектора ---- */
+    function findSector(id) { return state.sectors.filter(function (x) { return x.id === id; })[0]; }
+
+    function renderColorRow() {
+        el.colorRow.textContent = '';
+        COLORS.forEach(function (c) {
+            var b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'color-dot' + (c === state.editColor ? ' on' : '');
+            b.style.background = c;
+            b.setAttribute('role', 'radio');
+            b.setAttribute('aria-checked', String(c === state.editColor));
+            b.setAttribute('aria-label', 'Колір ' + c);
+            b.addEventListener('click', function () {
+                state.editColor = c;
+                renderColorRow();
+                refreshForm();
+            });
+            el.colorRow.appendChild(b);
+        });
+    }
+
+    function startEdit(id) {
+        var s = findSector(id);
+        if (!s) return;
+        if (state.picking) setPicking(false);
+        closePanels();
+        if (state.tool === 'ruler') setRuler(false);
+        state.editingId = id;
+        state.editColor = s.color;
+        state.azMode = s.magAz != null ? 'mag' : 'true';
+        el.azInput.value = String(s.magAz != null ? s.magAz : s.az);
+        el.distInput.value = String(s.dist);
+        el.widthInput.value = String(s.width);
+        el.nameInput.value = s.name || '';
+        el.editBar.hidden = false;
+        el.sheet.classList.add('editing');
+        el.ctaText.textContent = 'Зберегти зміни';
+        renderColorRow();
+        renderSectors();
+        selectPoint(L.latLng(s.origin[0], s.origin[1]));
+        if (state.detent === 'mini') setDetent('mid');
+        updateSheetHeight(); // панель виросла — враховуємо її висоту, щоб сектор не сховався під нею
+        map.flyToBounds(sectorBounds([s]), fitOptions());
+    }
+
+    function exitEdit() {
+        state.editingId = null;
+        state.editColor = null;
+        el.editBar.hidden = true;
+        el.sheet.classList.remove('editing');
+        el.ctaText.textContent = 'Встановити сектор';
+        renderSectors();
+        refreshForm();
+    }
+
+    function saveEdit() {
+        var s = findSector(state.editingId);
+        if (!s) { exitEdit(); return; }
+        var v = refreshForm();
+        if (!state.selected || !v.valid) {
+            toast('Перевірте азимут, дальність і ширину');
+            return;
+        }
+        s.origin = [round(state.selected.lat, 7), round(state.selected.lng, 7)];
+        s.az = round(v.az, 2);
+        s.dist = round(v.dist, 1);
+        s.width = round(v.width, 2);
+        s.color = state.editColor || s.color;
+        var name = el.nameInput.value.trim();
+        if (name) s.name = name; else delete s.name;
+        if (v.decl != null) {
+            s.magAz = round(v.inputAz, 2);
+            s.decl = round(v.decl, 2);
+        } else {
+            delete s.magAz;
+            delete s.decl;
+        }
+        exitEdit();
+        saveState();
+        toast('Сектор ' + (s.name || fmtSectorAz(s)) + ' оновлено');
+    }
+
+    el.editCancel.addEventListener('click', function () {
+        exitEdit();
+        toast('Зміни скасовано');
     });
 
     function removeSector(id) {
@@ -3199,9 +3493,10 @@ svg.leaflet-image-layer.leaflet-interactive path {
         state.sectors.forEach(function (s, i) { if (s.id === id) idx = i; });
         if (idx < 0) return;
         var removed = state.sectors.splice(idx, 1)[0];
+        if (state.editingId === id) exitEdit();
         renderSectors();
         saveState();
-        toast('Сектор ' + fmtSectorAz(removed) + ' видалено', {
+        toast('Сектор ' + (removed.name || fmtSectorAz(removed)) + ' видалено', {
             label: 'Повернути',
             run: function () {
                 state.sectors.splice(Math.min(idx, state.sectors.length), 0, removed);
@@ -3273,6 +3568,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
         sectorsLayer.clearLayers();
 
         state.sectors.forEach(function (s) {
+            if (s.id === state.editingId) return; // редагований сектор показує попередній перегляд
             var shape = sectorShape(s);
             if (shape.polygon) {
                 L.polygon(shape.polygon, {
@@ -3291,7 +3587,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
                 icon: L.divIcon({
                     className: 'label-icon',
                     iconSize: [0, 0],
-                    html: '<div class="map-label"><i style="background:' + s.color + '"></i>' + fmtSectorAz(s) + ' · ' + fmtDist(s.dist) + '</div>'
+                    html: '<div class="map-label sector-lbl"><i style="background:' + s.color + '"></i>' + (s.name ? escapeHtml(s.name) + ' · ' : '') + fmtSectorAz(s) + ' · ' + fmtDist(s.dist) + '</div>'
                 })
             }).addTo(sectorsLayer);
 
@@ -3302,13 +3598,51 @@ svg.leaflet-image-layer.leaflet-interactive path {
             }).addTo(sectorsLayer);
             origin.bindTooltip('Обрати цю станцію', { direction: 'top', offset: [0, -8] });
             origin.on('click', function () {
+                if (state.editingId) return;
                 selectPoint(L.latLng(s.origin[0], s.origin[1]));
                 toast('Станцію обрано — додайте ще один сектор');
             });
         });
 
         renderList();
+        scheduleDeclutter();
     }
+
+    function escapeHtml(t) {
+        return String(t).replace(/[&<>"']/g, function (c) {
+            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+        });
+    }
+
+    /* ---- 3. Підписи без накладань ---- */
+    var declutterFrame = null;
+    function scheduleDeclutter() {
+        if (declutterFrame) cancelAnimationFrame(declutterFrame);
+        declutterFrame = requestAnimationFrame(declutterLabels);
+    }
+
+    // Новіші сектори мають пріоритет; підпис, що налазить на вже показаний, ховаємо.
+    // При сильному віддаленні (масштаб < 12) підписи ховаються всі.
+    function declutterLabels() {
+        declutterFrame = null;
+        var labels = Array.prototype.slice.call(document.querySelectorAll('.sector-lbl')).reverse();
+        var far = map.getZoom() < 12;
+        var kept = [];
+        var pad = 4;
+        labels.forEach(function (lbl) {
+            if (far) {
+                lbl.classList.add('lbl-hidden');
+                return;
+            }
+            var r = lbl.getBoundingClientRect();
+            var hit = kept.some(function (k) {
+                return r.left < k.right + pad && r.right > k.left - pad && r.top < k.bottom + pad && r.bottom > k.top - pad;
+            });
+            lbl.classList.toggle('lbl-hidden', hit);
+            if (!hit) kept.push(r);
+        });
+    }
+    map.on('zoomend moveend', scheduleDeclutter);
 
     function renderList() {
         var n = state.sectors.length;
@@ -3326,6 +3660,12 @@ svg.leaflet-image-layer.leaflet-interactive path {
             var li = document.createElement('li');
             li.className = 'sector-item';
             li.tabIndex = 0;
+            var bg = document.createElement('div');
+            bg.className = 'swipe-bg';
+            bg.appendChild(svgIcon(ICONS.trash, 16, 2.4));
+            bg.appendChild(document.createTextNode('Видалити'));
+            var row = document.createElement('div');
+            row.className = 'swipe-row';
 
             var icon = document.createElement('div');
             icon.className = 'wedge-icon';
@@ -3342,15 +3682,17 @@ svg.leaflet-image-layer.leaflet-interactive path {
             var title = document.createElement('div');
             title.className = 'sector-title';
             var azEl = document.createElement('b');
-            azEl.className = 'num';
-            azEl.textContent = fmtSectorAz(s);
+            azEl.className = s.name ? 'sector-name' : 'num';
+            azEl.textContent = s.name || fmtSectorAz(s);
             var meta = document.createElement('span');
-            meta.textContent = fmtDist(s.dist) + ' · ' + fmtWidth(s.width);
+            meta.textContent = s.name ? '' : fmtDist(s.dist) + ' · ' + fmtWidth(s.width);
             title.appendChild(azEl);
             title.appendChild(meta);
             var sub = document.createElement('div');
             sub.className = 'sector-sub';
-            sub.textContent = (s.magAz != null ? 'іст. ' + fmtDeg(s.az) + ' · ' : '') + fmtLatLng(s.origin[0], s.origin[1]);
+            // Для сектора з назвою параметри переходять у другий рядок, щоб назва не обрізалась.
+            sub.textContent = (s.name ? fmtSectorAz(s) + ' · ' + fmtDist(s.dist) + ' · ' + fmtWidth(s.width) + ' · ' : '') +
+                (s.magAz != null ? 'іст. ' + fmtDeg(s.az) + ' · ' : '') + fmtLatLng(s.origin[0], s.origin[1]);
             main.appendChild(title);
             main.appendChild(sub);
 
@@ -3369,8 +3711,19 @@ svg.leaflet-image-layer.leaflet-interactive path {
                 copyText(fmtLatLng(end[0], end[1]));
             });
 
+            var editBtn = document.createElement('button');
+            editBtn.className = 'round-btn solid';
+            editBtn.type = 'button';
+            editBtn.title = 'Змінити сектор';
+            editBtn.setAttribute('aria-label', editBtn.title);
+            editBtn.appendChild(svgIcon('M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4', 15, 2.3));
+            editBtn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                startEdit(s.id);
+            });
+
             var delBtn = document.createElement('button');
-            delBtn.className = 'round-btn danger';
+            delBtn.className = 'round-btn danger del-btn';
             delBtn.type = 'button';
             delBtn.title = 'Видалити сектор';
             delBtn.setAttribute('aria-label', delBtn.title);
@@ -3381,11 +3734,19 @@ svg.leaflet-image-layer.leaflet-interactive path {
             });
 
             actions.appendChild(copyBtn);
+            actions.appendChild(editBtn);
             actions.appendChild(delBtn);
-            li.appendChild(icon);
-            li.appendChild(main);
-            li.appendChild(actions);
+            row.appendChild(icon);
+            row.appendChild(main);
+            row.appendChild(actions);
+            li.appendChild(bg);
+            li.appendChild(row);
+            attachSwipe(li, row, s);
             li.addEventListener('click', function () {
+                if (li.getAttribute('data-noclick')) {
+                    li.removeAttribute('data-noclick');
+                    return;
+                }
                 if (state.picking) togglePicked(s.id);
                 else focusSector(s.id);
             });
@@ -3395,6 +3756,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
                     else focusSector(s.id);
                 }
                 if (e.key === 'Delete') removeSector(s.id);
+                if (e.key === 'e' || e.key === 'E') startEdit(s.id);
             });
             el.sectorList.appendChild(li);
         });
@@ -3402,6 +3764,64 @@ svg.leaflet-image-layer.leaflet-interactive path {
 
     el.fitBtn.addEventListener('click', fitAll);
     el.clearBtn.addEventListener('click', clearAll);
+
+    // Свайп ліворуч — видалити (з «Повернути»), довге натискання — змінити.
+    function attachSwipe(li, row, s) {
+        var x0 = 0, y0 = 0, dx = 0, active = false, decided = false, horizontal = false, longPress = null;
+        function reset() {
+            row.style.transform = '';
+            setTimeout(function () { li.classList.remove('swiping', 'armed'); }, 250);
+        }
+        row.addEventListener('pointerdown', function (e) {
+            if (state.picking || e.button > 0 || e.target.closest('button')) return;
+            x0 = e.clientX; y0 = e.clientY; dx = 0;
+            active = true; decided = false; horizontal = false;
+            longPress = setTimeout(function () {
+                if (decided) return;
+                active = false;
+                li.setAttribute('data-noclick', '1');
+                startEdit(s.id);
+            }, 550);
+        });
+        row.addEventListener('pointermove', function (e) {
+            if (!active) return;
+            var mx = e.clientX - x0, my = e.clientY - y0;
+            if (!decided && (Math.abs(mx) > 8 || Math.abs(my) > 8)) {
+                decided = true;
+                clearTimeout(longPress);
+                horizontal = Math.abs(mx) > Math.abs(my) && mx < 0;
+                if (!horizontal) { active = false; return; }
+                li.classList.add('swiping');
+                try { row.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+            }
+            if (horizontal) {
+                dx = Math.min(0, mx);
+                row.style.transform = 'translateX(' + dx + 'px)';
+                li.classList.toggle('armed', dx < -90);
+            }
+        });
+        function end() {
+            clearTimeout(longPress);
+            if (!active) return;
+            active = false;
+            if (!horizontal) return;
+            li.setAttribute('data-noclick', '1');
+            setTimeout(function () { li.removeAttribute('data-noclick'); }, 400);
+            if (dx < -90) {
+                row.style.transition = 'transform 0.18s ease-in';
+                row.style.transform = 'translateX(-110%)';
+                setTimeout(function () { removeSector(s.id); }, 180);
+            } else {
+                reset();
+            }
+        }
+        row.addEventListener('pointerup', end);
+        row.addEventListener('pointercancel', function () {
+            clearTimeout(longPress);
+            if (active && horizontal) reset();
+            active = false;
+        });
+    }
 
     /* ================= Info card ================= */
     var cardOwner = null;
@@ -3560,10 +3980,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
         el.azInput.value = String(round(az, 1)).replace(/\.0$/, '');
         el.distInput.value = String(Math.max(LIMITS.dist.min, Math.min(LIMITS.dist.max, Math.round(dist))));
         selectPoint(L.latLng(a[0], a[1]));
-        if (state.compact) {
-            state.compact = false;
-            applyCompact();
-        }
+        if (state.detent !== 'full') setDetent('full');
         saveSoon();
         toast('Азимут і дальність перенесено — натисніть «Встановити сектор»');
     }
@@ -3713,7 +4130,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
             return {
                 type: 'Feature',
                 properties: {
-                    id: s.id, azimuth: s.az, magnetic_azimuth: s.magAz != null ? s.magAz : null,
+                    id: s.id, name: s.name || null, azimuth: s.az, magnetic_azimuth: s.magAz != null ? s.magAz : null,
                     declination: s.decl != null ? s.decl : null, distance: s.dist, width: s.width, color: s.color,
                     origin_lat: s.origin[0], origin_lng: s.origin[1],
                     end_lat: round(end[0], 7), end_lng: round(end[1], 7)
@@ -3751,6 +4168,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
                 color: /^#[0-9a-f]{3,8}$/i.test(p.color || '') ? p.color : nextColor(),
                 created: Date.now()
             };
+            if (typeof p.name === 'string' && p.name.trim()) s.name = p.name.trim().slice(0, 40);
             var magAz = Number(pick(p.magAz, p.magnetic_azimuth));
             var decl = Number(pick(p.decl, p.declination));
             if (p.magAz != null || p.magnetic_azimuth != null) {
@@ -4073,27 +4491,116 @@ svg.leaflet-image-layer.leaflet-interactive path {
         el.layerBtn.setAttribute('aria-expanded', String(open));
     });
 
-    el.locateBtn.addEventListener('click', function () {
+    /* ================= Моє місцезнаходження з напрямком погляду ================= */
+    var me = { watch: null, marker: null, circle: null, pos: null, heading: null, first: true, frame: null };
+
+    function meIcon() {
+        return L.divIcon({ className: 'tool-icon', iconSize: [0, 0], html: '<div class="me"><div class="me-cone" hidden></div><div class="me-halo"></div><div class="me-dot"></div></div>' });
+    }
+
+    function renderHeading() {
+        me.frame = null;
+        if (!me.marker || me.heading == null) return;
+        var root = me.marker.getElement();
+        var cone = root && root.querySelector('.me-cone');
+        if (!cone) return;
+        cone.hidden = false;
+        cone.style.transform = 'rotate(' + me.heading + 'deg)';
+    }
+
+    function onOrientation(e) {
+        var hdg = null;
+        if (typeof e.webkitCompassHeading === 'number' && e.webkitCompassHeading >= 0) {
+            // iPhone дає курс від магнітної півночі — переводимо в істинний через схилення WMM.
+            hdg = e.webkitCompassHeading + (me.pos ? declinationAt(me.pos[0], me.pos[1]) : 0);
+        } else if (e.absolute && e.alpha != null) {
+            hdg = 360 - e.alpha;
+        } else {
+            return;
+        }
+        var screenAngle = (window.screen && screen.orientation && screen.orientation.angle) || window.orientation || 0;
+        me.heading = normAz(hdg + screenAngle);
+        if (!me.frame) me.frame = requestAnimationFrame(renderHeading);
+    }
+
+    function startCompass() {
+        var DOE = window.DeviceOrientationEvent;
+        if (!DOE) return;
+        function listen() {
+            window.addEventListener('deviceorientationabsolute', onOrientation, true);
+            window.addEventListener('deviceorientation', onOrientation, true);
+        }
+        // На iPhone дозвіл на компас запитується лише з натиску користувача.
+        if (typeof DOE.requestPermission === 'function') {
+            DOE.requestPermission().then(function (res) { if (res === 'granted') listen(); }).catch(function () {});
+        } else {
+            listen();
+        }
+    }
+
+    function stopCompass() {
+        window.removeEventListener('deviceorientationabsolute', onOrientation, true);
+        window.removeEventListener('deviceorientation', onOrientation, true);
+    }
+
+    function onPosition(pos) {
+        var lat = pos.coords.latitude, lng = pos.coords.longitude, acc = pos.coords.accuracy;
+        me.pos = [lat, lng];
+        el.locateBtn.classList.remove('busy');
+        el.locateBtn.classList.add('active');
+        if (!me.marker) me.marker = L.marker([lat, lng], { icon: meIcon(), interactive: false, keyboard: false, zIndexOffset: 800 }).addTo(map);
+        else me.marker.setLatLng([lat, lng]);
+        if (!me.circle) me.circle = L.circle([lat, lng], { radius: acc, color: '#2f6bff', weight: 1, fillOpacity: 0.08, interactive: false }).addTo(map);
+        else me.circle.setLatLng([lat, lng]).setRadius(acc);
+        // Без компаса показуємо напрямок руху з GPS.
+        if (me.heading == null && pos.coords.heading != null && !isNaN(pos.coords.heading) && pos.coords.speed > 1) {
+            me.heading = pos.coords.heading;
+        }
+        renderHeading();
+        if (me.first) {
+            me.first = false;
+            map.flyTo([lat, lng], Math.max(map.getZoom(), 17), { duration: 0.8 });
+            if (!state.editingId) selectPoint(L.latLng(lat, lng));
+            toast('Ви тут · точність ±' + Math.round(acc) + ' м. Натисніть ще раз, щоб вимкнути');
+        }
+    }
+
+    function startTracking() {
         if (!('geolocation' in navigator)) {
             toast('Цей браузер не підтримує геолокацію');
             return;
         }
+        startCompass();
+        me.first = true;
         el.locateBtn.classList.add('busy');
-        navigator.geolocation.getCurrentPosition(function (pos) {
+        me.watch = navigator.geolocation.watchPosition(onPosition, function (err) {
             el.locateBtn.classList.remove('busy');
-            el.locateBtn.classList.add('active');
-            var lat = pos.coords.latitude, lng = pos.coords.longitude, accuracy = pos.coords.accuracy;
-            if (locateCircle) map.removeLayer(locateCircle);
-            locateCircle = L.circle([lat, lng], {
-                radius: accuracy, color: '#2f6bff', weight: 1, fillOpacity: 0.08, interactive: false
-            }).addTo(map);
-            map.flyTo([lat, lng], Math.max(map.getZoom(), 17), { duration: 0.8 });
-            selectPoint(L.latLng(lat, lng));
-            toast('Ви тут · точність ±' + Math.round(accuracy) + ' м');
-        }, function (err) {
-            el.locateBtn.classList.remove('busy');
-            toast(err.code === 1 ? 'Дозвольте доступ до геолокації в налаштуваннях браузера' : 'Не вдалося визначити місцезнаходження');
-        }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 });
+            if (err.code === 1) {
+                toast('Дозвольте доступ до геолокації в налаштуваннях браузера');
+                stopTracking();
+            } else if (me.first) {
+                toast('Не вдалося визначити місцезнаходження');
+            }
+        }, { enableHighAccuracy: true, timeout: 20000, maximumAge: 5000 });
+    }
+
+    function stopTracking() {
+        if (me.watch != null) navigator.geolocation.clearWatch(me.watch);
+        me.watch = null;
+        stopCompass();
+        if (me.marker) map.removeLayer(me.marker);
+        if (me.circle) map.removeLayer(me.circle);
+        me.marker = me.circle = me.pos = me.heading = null;
+        el.locateBtn.classList.remove('active', 'busy');
+    }
+
+    el.locateBtn.addEventListener('click', function () {
+        if (me.watch != null) {
+            stopTracking();
+            toast('Відстеження місцезнаходження вимкнено');
+        } else {
+            startTracking();
+        }
     });
 
     var EYE = '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>';
@@ -4140,7 +4647,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 
     /* ================= Init ================= */
     buildPresets();
-    applyCompact();
+    applyDetent();
     renderSectors();
     renderLayerOptions();
     refreshForm();
