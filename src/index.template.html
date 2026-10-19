@@ -2260,10 +2260,10 @@
 
     function haptic() {
         var now = Date.now();
-        if (now - lastHaptic < 35) return; // не частіше ~28 разів на секунду
+        if (now - lastHaptic < 25) return; // не частіше 40 разів на секунду, щоб мотор встигав
         lastHaptic = now;
         if (typeof navigator.vibrate === 'function' && !IS_IOS) {
-            try { navigator.vibrate(8); } catch (e) { /* ignore */ }
+            try { navigator.vibrate(5); } catch (e) { /* ignore */ }
             return;
         }
         if (!IS_IOS) return;
@@ -2299,10 +2299,10 @@
         return label;
     }
 
-    // Клацання кожні 5° під час обертання компаса.
+    // Клацання на кожному градусі під час обертання компаса.
     var lastDetent = null;
     function dialTick(az) {
-        var detent = Math.floor(normAz(az + 2.5) / 5);
+        var detent = Math.round(normAz(az)) % 360;
         if (lastDetent !== null && detent !== lastDetent) haptic();
         lastDetent = detent;
     }
