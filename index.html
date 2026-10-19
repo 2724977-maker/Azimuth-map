@@ -1725,7 +1725,15 @@ svg.leaflet-image-layer.leaflet-interactive path {
 
         /* ---------- Адреса станції ---------- */
         .station-coords { font-family: var(--font-num); font-size: 0.72rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .station.has-address .station-value { font-family: var(--font-ui); font-size: 0.9rem; }
+        .station.has-address .station-value {
+            font-family: var(--font-ui);
+            font-size: 0.88rem;
+            line-height: 1.25;
+            white-space: normal;
+            overflow: visible;
+            text-overflow: clip;
+            overflow-wrap: anywhere;
+        }
 
         /* ---------- Редагування сектора ---------- */
         .edit-bar { display: grid; gap: 8px; margin-bottom: 8px; }
@@ -2032,7 +2040,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
     <div class="eyebrow">Шар мапи</div>
     <div id="layerOptions"></div>
     <div class="layers-attrib" id="layersAttrib"></div>
-    <div class="layers-attrib">Версія застосунку: <span class="num">6bec877e382b</span></div>
+    <div class="layers-attrib">Версія застосунку: <span class="num">1337343b1679</span></div>
     <div class="look-box">
         <div class="eyebrow">Вигляд мапи</div>
         <div class="seg" id="lookSeg" role="radiogroup" aria-label="Вигляд мапи">
@@ -3233,8 +3241,9 @@ svg.leaflet-image-layer.leaflet-interactive path {
     var addressTimer = null;
     var addressSeq = 0;
 
+    // Повна адреса так, як її дає Visicom: тип і назва вулиці (зі старою назвою в дужках), будинок, населений пункт.
     function shortStreet(p) {
-        var street = String(p.street || '').replace(/\s*\([^)]*\)/g, '').trim();
+        var street = String(p.street || '').trim();
         if (!street) return '';
         var parts = [(p.street_type ? p.street_type + ' ' : '') + street];
         if (p.name) parts.push(p.name);
@@ -3339,7 +3348,9 @@ svg.leaflet-image-layer.leaflet-interactive path {
 
     el.clearPointBtn.addEventListener('click', clearSelection);
     el.copyPointBtn.addEventListener('click', function () {
-        if (state.selected) copyText(fmtLatLng(state.selected.lat, state.selected.lng));
+        if (!state.selected) return;
+        var coords = fmtLatLng(state.selected.lat, state.selected.lng);
+        copyText(el.station.classList.contains('has-address') ? el.pointText.textContent + ' (' + coords + ')' : coords);
     });
 
     /* ================= Preview ================= */
