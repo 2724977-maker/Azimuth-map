@@ -2075,7 +2075,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
     <div class="eyebrow">Шар мапи</div>
     <div id="layerOptions"></div>
     <div class="layers-attrib" id="layersAttrib"></div>
-    <div class="layers-attrib">Версія застосунку: <span class="num">b1ab3663ac9d</span></div>
+    <div class="layers-attrib">Версія застосунку: <span class="num">0aa880337a9e</span></div>
     <label class="sound-row" for="soundToggle">
         <span>Звук прокрутки компаса</span>
         <input type="checkbox" switch id="soundToggle">
@@ -3022,29 +3022,79 @@ svg.leaflet-image-layer.leaflet-interactive path {
         }, true);
     });
 
-    // Тихе клацання на кожному градусі, нижчий тон кожні 10°, глухий «тук» на сторонах світу.
+    // Строгий механічний «тік», як у колеса вибору iOS чи коронки годинника: короткий імпульс
+    // відфільтрованого шуму без тону. Кожні 10° — щільніший, на сторонах світу — короткий «тук» фіксатора.
+    var tickNoise = null;
+    var masterGain = null;
+
+    function getTickNoise(ctx) {
+        if (tickNoise && tickNoise.sampleRate === ctx.sampleRate) return tickNoise;
+        var len = Math.floor(ctx.sampleRate * 0.025);
+        tickNoise = ctx.createBuffer(1, len, ctx.sampleRate);
+        var data = tickNoise.getChannelData(0);
+        var seed = 7;
+        for (var i = 0; i < len; i++) {
+            // Фіксований «шум» (той самий щоразу) — клацання звучить однаково, як справжній механізм.
+            seed = (seed * 16807) % 2147483647;
+            var white = seed / 1073741823.5 - 1;
+            data[i] = white * Math.pow(1 - i / len, 8);
+        }
+        return tickNoise;
+    }
+
+    function renderTick(ctx, dest, t, deg) {
+        var cardinal = deg % 90 === 0, ten = deg % 10 === 0;
+        var src = ctx.createBufferSource();
+        src.buffer = getTickNoise(ctx);
+        var hp = ctx.createBiquadFilter();
+        hp.type = 'highpass';
+        hp.frequency.value = cardinal ? 1100 : 1800;
+        var bp = ctx.createBiquadFilter();
+        bp.type = 'bandpass';
+        bp.frequency.value = cardinal ? 2500 : ten ? 3100 : 3700;
+        bp.Q.value = 1.3;
+        var g = ctx.createGain();
+        var peak = cardinal ? 0.9 : ten ? 0.6 : 0.42;
+        var len = cardinal ? 0.016 : ten ? 0.011 : 0.007;
+        g.gain.setValueAtTime(peak, t);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+        src.connect(hp);
+        hp.connect(bp);
+        bp.connect(g);
+        g.connect(dest);
+        src.start(t);
+        src.stop(t + 0.026);
+        if (ten || cardinal) {
+            // Ледь відчутне низьке «тіло» — відчуття ваги, як у дорогого механізму.
+            var body = ctx.createOscillator();
+            body.type = 'sine';
+            body.frequency.setValueAtTime(cardinal ? 150 : 210, t);
+            body.frequency.exponentialRampToValueAtTime(cardinal ? 95 : 160, t + 0.03);
+            var bg = ctx.createGain();
+            var bPeak = cardinal ? 0.32 : 0.1;
+            var bLen = cardinal ? 0.045 : 0.018;
+            bg.gain.setValueAtTime(0.0001, t);
+            bg.gain.exponentialRampToValueAtTime(bPeak, t + 0.002);
+            bg.gain.exponentialRampToValueAtTime(0.0001, t + bLen);
+            body.connect(bg);
+            bg.connect(dest);
+            body.start(t);
+            body.stop(t + bLen + 0.01);
+        }
+    }
+
     function tickSound(deg) {
         var ctx = getAudio();
         if (!ctx || ctx.state !== 'running') return;
         var now = Date.now();
         if (now - lastSound < 18) return;
         lastSound = now;
-        var cardinal = deg % 90 === 0, ten = deg % 10 === 0;
-        var t = ctx.currentTime;
-        var osc = ctx.createOscillator();
-        var gain = ctx.createGain();
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(cardinal ? 820 : ten ? 1250 : 2100, t);
-        osc.frequency.exponentialRampToValueAtTime(cardinal ? 520 : ten ? 900 : 1500, t + 0.03);
-        var peak = cardinal ? 0.32 : ten ? 0.2 : 0.11;
-        var len = cardinal ? 0.07 : ten ? 0.04 : 0.025;
-        gain.gain.setValueAtTime(0.0001, t);
-        gain.gain.exponentialRampToValueAtTime(peak, t + 0.002);
-        gain.gain.exponentialRampToValueAtTime(0.0001, t + len);
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start(t);
-        osc.stop(t + len + 0.01);
+        if (!masterGain) {
+            masterGain = ctx.createGain();
+            masterGain.gain.value = 0.9;
+            masterGain.connect(ctx.destination);
+        }
+        renderTick(ctx, masterGain, ctx.currentTime, deg);
     }
 
     // Клацання (вібрація + звук) на кожному градусі під час обертання компаса.
@@ -4850,7 +4900,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 
     // Exposed for debugging / tests.
     window.AzimuthMap = { parseCoordinates: parseCoordinates, destination: destination, sectorShape: sectorShape, state: state, visicomCheck: function () { return visicomCheck; },
-        declinationAt: declinationAt, bearingIntersection: bearingIntersection, bearingBetween: bearingBetween, distanceBetween: distanceBetween };
+        renderTick: renderTick, declinationAt: declinationAt, bearingIntersection: bearingIntersection, bearingBetween: bearingBetween, distanceBetween: distanceBetween };
 })();
 </script>
 </body>
