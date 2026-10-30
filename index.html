@@ -1583,7 +1583,13 @@ svg.leaflet-image-layer.leaflet-interactive path {
             border-radius: 9px;
             white-space: nowrap;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            line-height: 1.2;
         }
+        .pick-az { font: 700 0.84rem var(--font-num); }
+        .pick-ll { font: 600 0.62rem var(--font-num); opacity: 0.78; letter-spacing: 0; }
 
         .map-label {
             position: absolute;
@@ -2075,7 +2081,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
     <div class="eyebrow">Шар мапи</div>
     <div id="layerOptions"></div>
     <div class="layers-attrib" id="layersAttrib"></div>
-    <div class="layers-attrib">Версія застосунку: <span class="num">0aa880337a9e</span></div>
+    <div class="layers-attrib">Версія застосунку: <span class="num">0381cd8a67e1</span></div>
     <label class="sound-row" for="soundToggle">
         <span>Звук прокрутки компаса</span>
         <input type="checkbox" switch id="soundToggle">
@@ -3443,13 +3449,21 @@ svg.leaflet-image-layer.leaflet-interactive path {
     })();
 
     /* ================= Point selection ================= */
+    // Маркер станції: стрілка азимута, а над нею — градуси й координати точки.
     function pickIconHtml(az, color) {
         return '<div class="pick" style="--pick-color:' + color + '">' +
             '<div class="pick-pulse"></div>' +
             '<div class="pick-needle" style="transform: rotate(' + (az == null ? 0 : az) + 'deg)"' + (az == null ? ' hidden' : '') + '></div>' +
             '<div class="pick-dot"></div>' +
-            '<div class="pick-bubble">' + (az == null ? '—' : fmtDeg(az)) + '</div>' +
+            '<div class="pick-bubble"><span class="pick-az">' + (az == null ? '—' : fmtDeg(az)) + '</span><span class="pick-ll"></span></div>' +
             '</div>';
+    }
+
+    function updatePickCoords() {
+        if (!pickMarker || !state.selected) return;
+        var root = pickMarker.getElement();
+        var ll = root && root.querySelector('.pick-ll');
+        if (ll) ll.textContent = fmtLatLng(state.selected.lat, state.selected.lng);
     }
 
     function updatePickMarker(v) {
@@ -3458,8 +3472,9 @@ svg.leaflet-image-layer.leaflet-interactive path {
         if (!root) return;
         var pickEl = root.querySelector('.pick');
         var needle = root.querySelector('.pick-needle');
-        var bubble = root.querySelector('.pick-bubble');
+        var bubble = root.querySelector('.pick-az');
         pickEl.style.setProperty('--pick-color', currentColor());
+        updatePickCoords();
         if (v.az == null) {
             needle.hidden = true;
             bubble.textContent = '—';
@@ -3541,6 +3556,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
                 var p = e.target.getLatLng();
                 state.selected = { lat: p.lat, lng: L.Util.wrapNum(p.lng, [-180, 180], true) };
                 showStation(state.selected.lat, state.selected.lng, null);
+                updatePickCoords();
                 renderPreview(readInputs());
             });
             pickMarker.on('dragend', function () {
