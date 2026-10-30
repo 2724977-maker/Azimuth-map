@@ -1,7 +1,7 @@
 /* Azimuth Map service worker: офлайн-запуск застосунку й кеш переглянутих тайлів. */
 'use strict';
 
-var VERSION = 'b5e0a5800964';
+var VERSION = '5c231dee8910';
 var SHELL_CACHE = 'azimuth-shell-' + VERSION;
 var TILE_CACHE = 'azimuth-tiles-v2';
 var FONT_CACHE = 'azimuth-fonts-v1';
