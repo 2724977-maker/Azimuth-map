@@ -1577,17 +1577,30 @@ svg.leaflet-image-layer.leaflet-interactive path {
             /* Підпис під кружком маркера. */
             left: 50%; top: calc(100% + 2px);
             transform: translateX(-50%);
-            background: #0c1420;
+            /* Напівпрозоре темне скло: мапу під підписом видно. */
+            background: rgba(12, 20, 32, 0.62);
+            -webkit-backdrop-filter: blur(10px) saturate(160%);
+            backdrop-filter: blur(10px) saturate(160%);
+            border: 0.5px solid rgba(255, 255, 255, 0.18);
             color: #ffffff;
             font: 700 0.8rem var(--font-num);
-            padding: 4px 9px;
-            border-radius: 9px;
+            padding: 5px 10px;
+            border-radius: 10px;
             white-space: nowrap;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.22);
             display: flex;
             flex-direction: column;
             align-items: center;
+            gap: 1px;
             line-height: 1.2;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+        }
+        .pick-addr {
+            font: 600 0.68rem var(--font-ui);
+            max-width: 210px;
+            white-space: normal;
+            text-align: center;
+            opacity: 0.95;
         }
         .pick-az { font: 700 0.84rem var(--font-num); }
         .pick-ll { font: 600 0.62rem var(--font-num); opacity: 0.78; letter-spacing: 0; }
@@ -2082,7 +2095,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
     <div class="eyebrow">Шар мапи</div>
     <div id="layerOptions"></div>
     <div class="layers-attrib" id="layersAttrib"></div>
-    <div class="layers-attrib">Версія застосунку: <span class="num">8b178a6db3a0</span></div>
+    <div class="layers-attrib">Версія застосунку: <span class="num">b5e0a5800964</span></div>
     <label class="sound-row" for="soundToggle">
         <span>Звук прокрутки компаса</span>
         <input type="checkbox" switch id="soundToggle">
@@ -3456,7 +3469,8 @@ svg.leaflet-image-layer.leaflet-interactive path {
             '<div class="pick-pulse"></div>' +
             '<div class="pick-needle" style="transform: rotate(' + (az == null ? 0 : az) + 'deg)"' + (az == null ? ' hidden' : '') + '></div>' +
             '<div class="pick-dot"></div>' +
-            '<div class="pick-bubble"><span class="pick-az">' + (az == null ? '—' : fmtDeg(az)) + '</span><span class="pick-ll"></span></div>' +
+            '<div class="pick-bubble"><span class="pick-az">' + (az == null ? '—' : fmtDeg(az)) + '</span>' +
+            '<span class="pick-addr" hidden></span><span class="pick-ll"></span></div>' +
             '</div>';
     }
 
@@ -3506,6 +3520,30 @@ svg.leaflet-image-layer.leaflet-interactive path {
         el.pointText.textContent = address || fmtLatLng(lat, lng);
         el.pointCoords.hidden = !address;
         el.pointCoords.textContent = fmtLatLng(lat, lng);
+        var root = pickMarker && pickMarker.getElement();
+        var addrEl = root && root.querySelector('.pick-addr');
+        if (addrEl) {
+            addrEl.textContent = address || '';
+            addrEl.hidden = !address;
+        }
+    }
+
+    // Запасне джерело адреси — OpenStreetMap (Nominatim), якщо Visicom не відповів.
+    function osmAddress(lat, lng) {
+        var url = 'https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&addressdetails=1&accept-language=uk' +
+            '&lat=' + lat.toFixed(6) + '&lon=' + lng.toFixed(6);
+        return fetch(url, { headers: { Accept: 'application/json' } }).then(function (res) {
+            return res.ok ? res.json() : {};
+        }).then(function (d) {
+            var a = (d && d.address) || {};
+            var street = a.road || a.pedestrian || a.footway || a.square || a.neighbourhood || a.suburb;
+            if (!street) return '';
+            var parts = [street];
+            if (a.house_number) parts.push(a.house_number);
+            var place = a.city || a.town || a.village || a.hamlet || a.municipality;
+            if (place) parts.push(place);
+            return parts.join(', ');
+        });
     }
 
     function lookupAddress(lat, lng) {
@@ -3516,13 +3554,19 @@ svg.leaflet-image-layer.leaflet-interactive path {
             return;
         }
         showStation(lat, lng, null);
-        if (!VISICOM_DATA_KEY || !navigator.onLine) return;
+        if (!navigator.onLine) return;
         var seq = ++addressSeq;
         addressTimer = setTimeout(function () {
-            var url = 'https://api.visicom.ua/data-api/5.0/uk/geocode.json?categories=adr_address&near=' +
-                lng.toFixed(6) + ',' + lat.toFixed(6) + '&r=80&l=1&key=' + VISICOM_DATA_KEY;
-            fetch(url).then(function (res) { return res.ok ? res.json() : {}; }).then(function (data) {
-                var addr = data && data.properties ? shortStreet(data.properties) : '';
+            var visicom = VISICOM_DATA_KEY
+                ? fetch('https://api.visicom.ua/data-api/5.0/uk/geocode.json?categories=adr_address&near=' +
+                    lng.toFixed(6) + ',' + lat.toFixed(6) + '&r=80&l=1&key=' + VISICOM_DATA_KEY)
+                    .then(function (res) { return res.ok ? res.json() : {}; })
+                    .then(function (data) { return data && data.properties ? shortStreet(data.properties) : ''; })
+                    .catch(function () { return ''; })
+                : Promise.resolve('');
+            visicom.then(function (addr) {
+                return addr || osmAddress(lat, lng).catch(function () { return ''; });
+            }).then(function (addr) {
                 addressCache[key] = addr || '';
                 // Показуємо, лише якщо станцію за цей час не перенесли.
                 if (seq === addressSeq && state.selected && Math.abs(state.selected.lat - lat) < 1e-6 && Math.abs(state.selected.lng - lng) < 1e-6) {
