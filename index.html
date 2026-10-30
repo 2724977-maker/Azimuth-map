@@ -1574,7 +1574,8 @@ svg.leaflet-image-layer.leaflet-interactive path {
         }
         .pick-bubble {
             position: absolute;
-            left: 50%; bottom: calc(100% - 2px);
+            /* Підпис під кружком маркера. */
+            left: 50%; top: calc(100% + 2px);
             transform: translateX(-50%);
             background: #0c1420;
             color: #ffffff;
@@ -2081,7 +2082,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
     <div class="eyebrow">Шар мапи</div>
     <div id="layerOptions"></div>
     <div class="layers-attrib" id="layersAttrib"></div>
-    <div class="layers-attrib">Версія застосунку: <span class="num">0381cd8a67e1</span></div>
+    <div class="layers-attrib">Версія застосунку: <span class="num">8b178a6db3a0</span></div>
     <label class="sound-row" for="soundToggle">
         <span>Звук прокрутки компаса</span>
         <input type="checkbox" switch id="soundToggle">
