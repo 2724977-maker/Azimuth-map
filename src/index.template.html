@@ -70,6 +70,12 @@
             --kb: 0px;
             --glass-hi: rgba(255, 255, 255, 0.75);
             --glass-hi-2: rgba(255, 255, 255, 0.28);
+            --card: rgba(255, 255, 255, 0.62);
+            --card-line: rgba(12, 20, 32, 0.07);
+            --dial-1: #ffffff;
+            --dial-2: #e9edf2;
+            --cta-1: #ff7a4f;
+            --cta-2: #f0521d;
             --sheet-h: 0px;
             color-scheme: light;
         }
@@ -96,6 +102,10 @@
                 --shadow-sm: 0 6px 18px -6px rgba(0, 0, 0, 0.6);
                 --glass-hi: rgba(255, 255, 255, 0.16);
                 --glass-hi-2: rgba(255, 255, 255, 0.05);
+                --card: rgba(255, 255, 255, 0.045);
+                --card-line: rgba(255, 255, 255, 0.07);
+                --dial-1: #232c39;
+                --dial-2: #121821;
                 color-scheme: dark;
             }
         }
@@ -122,6 +132,10 @@
             --shadow-sm: 0 6px 18px -6px rgba(0, 0, 0, 0.6);
             --glass-hi: rgba(255, 255, 255, 0.16);
             --glass-hi-2: rgba(255, 255, 255, 0.05);
+            --card: rgba(255, 255, 255, 0.045);
+            --card-line: rgba(255, 255, 255, 0.07);
+            --dial-1: #232c39;
+            --dial-2: #121821;
             color-scheme: dark;
         }
 
@@ -1348,6 +1362,57 @@
         .sheet.compact .field.az { min-height: 50px; }
         .sheet.compact .field.az input { font-size: 1.1rem; }
 
+        /* ---------- Візуальне оновлення: компас-прилад, легкі картки, фірмова кнопка ---------- */
+        .dial { filter: drop-shadow(0 6px 14px rgba(12, 20, 32, 0.12)); }
+        .dial .bezel { fill: var(--fill-2); stroke: var(--card-line); stroke-width: 1; }
+        .dial .face { fill: url(#dialFace); stroke: var(--card-line); stroke-width: 1; }
+        .dial .df1 { stop-color: var(--dial-1); }
+        .dial .df2 { stop-color: var(--dial-2); }
+        .dial .tick { stroke: var(--muted); stroke-width: 1; stroke-linecap: round; opacity: 0.7; }
+        .dial .tick.mid { stroke-width: 1.4; opacity: 0.9; }
+        .dial .tick.major { stroke: var(--ink); stroke-width: 2.2; opacity: 1; }
+        .dial .cardinal { fill: var(--ink); font: 800 12.5px var(--font-ui); text-anchor: middle; dominant-baseline: central; }
+        .dial .cardinal.north { fill: var(--accent); }
+        .dial .numeral { fill: var(--muted); font: 700 9.5px var(--font-num); text-anchor: middle; dominant-baseline: central; }
+        .dial .north-mark { fill: var(--accent); }
+        .dial .wedge { stroke-width: 1.2; stroke-opacity: 0.7; }
+        .dial .needle { stroke: none; filter: drop-shadow(0 1px 1.5px rgba(0, 0, 0, 0.25)); }
+        .dial .needle-tail { fill: var(--muted); opacity: 0.6; }
+        .dial .hub { fill: var(--surface-solid); stroke-width: 3; }
+        .dial .hub-dot { fill: var(--ink); }
+
+        .field { background: var(--card); border: 1px solid var(--card-line); box-shadow: 0 1px 2px rgba(12, 20, 32, 0.03); }
+        .field:focus-within { border-color: var(--accent); background: var(--accent-soft); }
+        .field.invalid { border-color: var(--danger); background: var(--danger-soft); }
+        .presets .chip { background: transparent; border: 1px solid var(--card-line); color: var(--ink-2); }
+        .presets .chip.on { background: var(--primary); color: var(--primary-ink); border-color: transparent; }
+        .mode-toggle { background: var(--card); box-shadow: inset 0 0 0 1px var(--card-line); }
+        .nudge-btn { background: var(--card); box-shadow: inset 0 0 0 1px var(--card-line); }
+
+        .cta {
+            background: linear-gradient(180deg, var(--cta-1) 0%, var(--cta-2) 100%);
+            color: #ffffff;
+            box-shadow: 0 10px 24px -10px rgba(240, 82, 29, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+            letter-spacing: -0.01em;
+        }
+        .cta:disabled { background: var(--fill-2); color: var(--muted); box-shadow: none; opacity: 1; }
+        /* Колір наступного сектора видно на компасі й маркері; на кнопці — значок дії. */
+        .cta .swatch { display: none; }
+        .cta .cta-save, .sheet.editing .cta .cta-add { display: none; }
+        .sheet.editing .cta .cta-save { display: block; }
+        .sheet.editing .cta { background: linear-gradient(180deg, var(--cta-1) 0%, var(--cta-2) 100%); }
+        .cta-alt { background: var(--card); border: 1px solid var(--card-line); }
+
+        .station-mark { box-shadow: 0 4px 10px -4px rgba(240, 82, 29, 0.5); }
+        .station:not(.has-point) .station-mark { box-shadow: none; }
+
+        /* Новий сектор «промальовується» від станції. */
+        @keyframes sectorIn {
+            0% { stroke-dasharray: 1800; stroke-dashoffset: 1800; fill-opacity: 0; }
+            99% { stroke-dasharray: 1800; stroke-dashoffset: 0; }
+        }
+        .sector-new { animation: sectorIn 0.7s var(--ease); }
+
         /* ---------- Wide screens ---------- */
         @media (min-width: 760px) {
             .topbar { left: 16px; right: auto; width: 440px; top: calc(16px + var(--safe-t)); }
@@ -1618,14 +1683,26 @@
             <div class="dial-wrap">
                 <svg class="dial" id="dial" viewBox="-100 -100 200 200" role="slider" tabindex="0"
                      aria-label="Азимут" aria-valuemin="0" aria-valuemax="359" aria-valuenow="0">
-                    <circle class="face" r="97"/>
+                    <defs>
+                        <radialGradient id="dialFace" cx="50%" cy="35%" r="72%">
+                            <stop offset="0%" class="df1"/><stop offset="100%" class="df2"/>
+                        </radialGradient>
+                        <radialGradient id="wedgeGrad" cx="0" cy="0" r="80" gradientUnits="userSpaceOnUse">
+                            <stop offset="0%" id="wg0"/><stop offset="100%" id="wg1"/>
+                        </radialGradient>
+                    </defs>
+                    <circle class="bezel" r="99"/>
+                    <circle class="face" r="94"/>
                     <g id="dialTicks"></g>
                     <path class="wedge" id="dialWedge"/>
+                    <path class="north-mark" d="M0,-93.5 L-5.5,-84 L5.5,-84 Z"/>
                     <g class="needle-g" id="dialNeedle">
-                        <line class="needle" id="dialNeedleLine" x1="0" y1="0" x2="0" y2="-74"/>
-                        <circle id="dialNeedleTip" cx="0" cy="-74" r="5"/>
+                        <path class="needle-tail" d="M-2.6,0 L0,17 L2.6,0 Z"/>
+                        <path class="needle" id="dialNeedleLine" d="M-4.2,0 L0,-79 L4.2,0 Z"/>
+                        <circle id="dialNeedleTip" cx="0" cy="-79" r="0"/>
                     </g>
-                    <circle class="hub" id="dialHub" r="8"/>
+                    <circle class="hub" id="dialHub" r="7.5"/>
+                    <circle class="hub-dot" r="2.2"/>
                 </svg>
             </div>
             <div class="fields">
@@ -1672,6 +1749,8 @@
         <div class="cta-row">
             <button class="cta" type="submit" id="addBtn" disabled>
                 <span class="swatch" id="nextSwatch"></span>
+                <svg class="cta-icon cta-add" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                <svg class="cta-icon cta-save" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
                 <span id="ctaText">Встановити сектор</span>
             </button>
             <button class="cta-alt" type="button" id="addThreeBtn" disabled title="Три сектори: азимут, +120°, +240°">
@@ -2404,24 +2483,30 @@
 
     /* ================= Compass dial ================= */
     (function buildDial() {
+        // Шкала як у авіаційного компаса: риски кожні 5°, довші — кожні 10° і 30°.
         for (var deg = 0; deg < 360; deg += 5) {
             var major = deg % 30 === 0;
             var mid = deg % 10 === 0;
-            var r1 = 96, r2 = major ? 84 : mid ? 89 : 92;
+            var r1 = 92.5, r2 = major ? 80.5 : mid ? 85.5 : 88.5;
             var a = toRad(deg);
             el.dialTicks.appendChild(svgEl('line', {
-                'class': 'tick' + (major ? ' major' : ''),
+                'class': 'tick' + (major ? ' major' : mid ? ' mid' : ''),
                 x1: (r1 * Math.sin(a)).toFixed(2), y1: (-r1 * Math.cos(a)).toFixed(2),
-                x2: (r2 * Math.sin(a)).toFixed(2), y2: (-r2 * Math.cos(a)).toFixed(2),
-                'stroke-width': major ? 2 : 1.2
+                x2: (r2 * Math.sin(a)).toFixed(2), y2: (-r2 * Math.cos(a)).toFixed(2)
             }));
         }
-        [['Пн', 0], ['Сх', 90], ['Пд', 180], ['Зх', 270]].forEach(function (c) {
-            var a = toRad(c[1]);
-            var t = svgEl('text', { 'class': 'cardinal' + (c[1] === 0 ? ' north' : ''), x: (71 * Math.sin(a)).toFixed(2), y: (-71 * Math.cos(a)).toFixed(2) });
-            t.textContent = c[0];
+        // Сторони світу — літерами, решта поділок через 30° — цифрами (у десятках, як на приладах: 3 = 30°).
+        for (var d = 0; d < 360; d += 30) {
+            var ang = toRad(d);
+            var names = { 0: 'Пн', 90: 'Сх', 180: 'Пд', 270: 'Зх' };
+            var card = names[d];
+            var t = svgEl('text', {
+                'class': card ? 'cardinal' + (d === 0 ? ' north' : '') : 'numeral',
+                x: (68 * Math.sin(ang)).toFixed(2), y: (-68 * Math.cos(ang)).toFixed(2)
+            });
+            t.textContent = card || String(d / 10);
             el.dialTicks.appendChild(t);
-        });
+        }
     })();
 
     function renderDial(v) {
@@ -2429,12 +2514,15 @@
         var az = v.inputAz == null ? 0 : v.inputAz;
         el.dialNeedle.setAttribute('transform', 'rotate(' + az + ')');
         el.dialNeedle.style.opacity = v.inputAz == null ? 0.25 : 1;
-        el.dialNeedleLine.setAttribute('stroke', color);
-        el.dialNeedleTip.setAttribute('fill', color);
+        el.dialNeedleLine.setAttribute('fill', color);
         el.dialHub.setAttribute('stroke', color);
         var w = v.width == null ? 0 : v.width;
-        el.dialWedge.setAttribute('d', v.inputAz == null ? '' : wedgePath(az, w, 80));
-        el.dialWedge.setAttribute('fill', color);
+        el.dialWedge.setAttribute('d', v.inputAz == null ? '' : wedgePath(az, w, 79));
+        // Віяло з градієнтом: насичене біля центру, прозоре до краю.
+        var g0 = document.getElementById('wg0'), g1 = document.getElementById('wg1');
+        g0.setAttribute('stop-color', color); g0.setAttribute('stop-opacity', '0.42');
+        g1.setAttribute('stop-color', color); g1.setAttribute('stop-opacity', '0.1');
+        el.dialWedge.setAttribute('fill', 'url(#wedgeGrad)');
         el.dialWedge.setAttribute('stroke', color);
         el.dial.setAttribute('aria-valuenow', String(Math.round(az)));
         el.dial.setAttribute('aria-valuetext', fmtDeg(az));
@@ -3244,6 +3332,7 @@
         }
         state.colorSeq++;
         state.sectors.push(sector);
+        markNew([sector]);
         renderSectors();
         refreshForm();
         saveState();
@@ -3276,6 +3365,7 @@
             state.sectors.push(sec);
             added.push(sec);
         });
+        markNew(added);
         renderSectors();
         refreshForm();
         saveState();
@@ -3478,14 +3568,15 @@
             if (shape.polygon) {
                 var picked = s.id === state.cardSectorId;
                 L.polygon(shape.polygon, {
-                    color: s.color, weight: picked ? 3.5 : 2, opacity: 0.95,
-                    fillColor: s.color, fillOpacity: picked ? 0.3 : 0.16,
-                    lineJoin: 'round', interactive: false
+                    color: s.color, weight: picked ? 3 : 1.75, opacity: 0.95,
+                    fillColor: s.color, fillOpacity: picked ? 0.26 : 0.13,
+                    lineJoin: 'round', interactive: false,
+                    className: justAdded[s.id] ? 'sector-new' : ''
                 }).addTo(sectorsLayer);
             }
             var active = s.id === state.cardSectorId;
             L.polyline([s.origin, shape.end], {
-                color: s.color, weight: active ? 4 : 2.5, dashArray: active ? null : '1 7', lineCap: 'round', interactive: false
+                color: s.color, weight: active ? 3 : 1.6, opacity: active ? 1 : 0.6, lineCap: 'round', interactive: false
             }).addTo(sectorsLayer);
             // Невидима широка лінія вздовж азимута: торкання відкриває картку сектора.
             var hit = L.polyline([s.origin, shape.end], { color: '#000', opacity: 0, weight: 22, bubblingMouseEvents: false }).addTo(sectorsLayer);
@@ -3518,7 +3609,12 @@
 
         renderList();
         scheduleDeclutter();
+        justAdded = {};
     }
+
+    // Сектори, щойно додані: їх промальовуємо анімацією один раз.
+    var justAdded = {};
+    function markNew(list) { list.forEach(function (x) { justAdded[x.id] = true; }); }
 
     function escapeHtml(t) {
         return String(t).replace(/[&<>"']/g, function (c) {
