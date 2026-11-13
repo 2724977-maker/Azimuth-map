@@ -1984,19 +1984,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
         .cta-alt:disabled { opacity: 0.35; }
         .sheet.editing .cta-alt { display: none; }
 
-        /* ---------- Кільця дальності й підписи, які можна натиснути ---------- */
-        .ring-lbl {
-            position: absolute;
-            transform: translate(-50%, -50%);
-            padding: 1px 6px;
-            border-radius: 99px;
-            background: rgba(255, 255, 255, 0.75);
-            color: #3a4657;
-            font: 700 0.62rem var(--font-num);
-            white-space: nowrap;
-            pointer-events: none;
-        }
-        .map-dark .ring-lbl, .night .ring-lbl { background: rgba(26, 33, 44, 0.8); color: #c1c9d4; }
+        /* ---------- Підписи секторів, які можна натиснути ---------- */
         .map-label.sector-lbl { pointer-events: auto; cursor: pointer; }
         .map-label.sector-lbl.lbl-hidden { pointer-events: none; }
 
@@ -2207,10 +2195,6 @@ svg.leaflet-image-layer.leaflet-interactive path {
                 <span>Звук прокрутки компаса<small>Клацання на кожному градусі</small></span>
                 <input type="checkbox" switch id="soundToggle">
             </label>
-            <label class="set-row" for="ringsToggle">
-                <span>Кільця дальності<small>Відстані навколо обраної станції</small></span>
-                <input type="checkbox" switch id="ringsToggle">
-            </label>
         </div>
 
         <div class="eyebrow set-title">Ключ Visicom</div>
@@ -2226,7 +2210,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 
         <div class="eyebrow set-title">Про застосунок</div>
         <div class="set-group">
-            <div class="about-line">Azimuth Map · версія <span class="num">a31c69b29470</span><br>
+            <div class="about-line">Azimuth Map · версія <span class="num">87d1a6b97f8e</span><br>
             Дані мап: OpenStreetMap, Visicom, Esri. Адреси: Visicom, OpenStreetMap Nominatim.<br>
             Магнітне схилення: World Magnetic Model 2025 (NOAA).</div>
         </div>
@@ -2519,7 +2503,6 @@ svg.leaflet-image-layer.leaflet-interactive path {
                 azMode: state.azMode,
                 mapLook: state.mapLook,
                 sound: state.sound,
-                rings: state.rings,
                 inputs: { az: el.azInput.value, dist: el.distInput.value, width: el.widthInput.value },
                 view: { center: [c.lat, c.lng], zoom: map.getZoom() }
             }));
@@ -2779,7 +2762,6 @@ svg.leaflet-image-layer.leaflet-interactive path {
         azMode: saved.azMode === 'mag' ? 'mag' : 'true',
         mapLook: ['auto', 'light', 'dark', 'night'].indexOf(saved.mapLook) >= 0 ? saved.mapLook : 'auto',
         sound: saved.sound !== false,
-        rings: saved.rings !== false,
         collapsed: {},
         cardSectorId: null,
         presetGroup: 'dist',
@@ -2909,14 +2891,6 @@ svg.leaflet-image-layer.leaflet-interactive path {
             b.setAttribute('aria-checked', String(on));
         });
     }
-
-    var ringsToggle = document.getElementById('ringsToggle');
-    ringsToggle.checked = state.rings;
-    ringsToggle.addEventListener('change', function () {
-        state.rings = ringsToggle.checked;
-        saveState();
-        refreshForm();
-    });
 
     var soundToggle = document.getElementById('soundToggle');
     soundToggle.checked = state.sound;
@@ -3942,29 +3916,6 @@ svg.leaflet-image-layer.leaflet-interactive path {
             }).addTo(previewLayer);
         }
         L.polyline([s.origin, shape.end], { color: color, weight: 3, opacity: 0.9, interactive: false }).addTo(previewLayer);
-        if (state.rings) drawRangeRings(s.origin, v.dist);
-    }
-
-    // Пунктирні кільця відстані навколо станції з «круглим» кроком: 100 м, 250 м, 500 м, 1 км…
-    function ringStep(dist) {
-        var steps = [10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000];
-        var best = steps[0];
-        steps.forEach(function (c) { if (dist / c >= 3) best = c; });
-        return best;
-    }
-
-    function drawRangeRings(origin, dist) {
-        var step = ringStep(dist);
-        for (var r = step, n = 0; r < dist * 0.999 && n < 8; r += step, n++) {
-            L.circle(origin, {
-                radius: r, color: '#5b6b7f', weight: 1, opacity: 0.55, dashArray: '3 5', fill: false, interactive: false
-            }).addTo(previewLayer);
-            var top = destination(origin[0], origin[1], 0, r);
-            L.marker(top, {
-                interactive: false, keyboard: false,
-                icon: L.divIcon({ className: 'label-icon', iconSize: [0, 0], html: '<div class="ring-lbl">' + fmtDist(r) + '</div>' })
-            }).addTo(previewLayer);
-        }
     }
 
     /* ================= Sectors ================= */
