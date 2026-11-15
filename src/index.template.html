@@ -1549,6 +1549,24 @@
         .sector-title .num { font-size: 1.05rem; }
         .sector-actions .round-btn { width: 34px; height: 34px; }
 
+        /* Панель кнопок завжди над списком: список — окремий шар, що обрізається своєю областю
+           (у Safari рядки з transform інакше «вилазять» поверх кнопок під час прокрутки). */
+        #listPanel { overflow: hidden; }
+        #listPanel > .panel-head, #listPanel > .list-tools { position: relative; z-index: 2; }
+        #listPanel > .scroll {
+            position: relative;
+            z-index: 1;
+            flex: 1 1 auto;
+            isolation: isolate;
+            overflow-x: hidden;
+            -webkit-overflow-scrolling: auto;
+            -webkit-transform: translateZ(0);
+            transform: translateZ(0);
+            -webkit-mask-image: -webkit-radial-gradient(white, black);
+            margin-top: 0;
+            padding-top: 4px;
+        }
+
         /* ---------- Wide screens ---------- */
         @media (min-width: 760px) {
             .topbar { left: 16px; right: auto; width: 440px; top: calc(16px + var(--safe-t)); }
