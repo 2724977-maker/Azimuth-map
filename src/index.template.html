@@ -50,7 +50,7 @@
             --danger: #e5484d;
             --danger-soft: rgba(229, 72, 77, 0.12);
             --map-bg: #e4e7eb;
-            --shadow: 0 18px 50px -12px rgba(12, 20, 32, 0.28), 0 2px 6px rgba(12, 20, 32, 0.06);
+            --shadow: 0 1px 1px rgba(12, 20, 32, 0.04), 0 10px 24px -8px rgba(12, 20, 32, 0.14), 0 32px 64px -24px rgba(12, 20, 32, 0.28);
             --shadow-sm: 0 6px 18px -6px rgba(12, 20, 32, 0.25);
             --blur: blur(24px) saturate(180%);
             /* На iPhone — системні SF Pro та SF Pro Rounded для цифр; на інших пристроях — Manrope і JetBrains Mono. */
@@ -98,7 +98,7 @@
                 --danger: #ff6b6f;
                 --danger-soft: rgba(255, 107, 111, 0.15);
                 --map-bg: #1b2028;
-                --shadow: 0 18px 50px -12px rgba(0, 0, 0, 0.7), 0 2px 6px rgba(0, 0, 0, 0.3);
+                --shadow: 0 1px 1px rgba(0, 0, 0, 0.3), 0 10px 24px -8px rgba(0, 0, 0, 0.55), 0 32px 64px -24px rgba(0, 0, 0, 0.7);
                 --shadow-sm: 0 6px 18px -6px rgba(0, 0, 0, 0.6);
                 --glass-hi: rgba(255, 255, 255, 0.16);
                 --glass-hi-2: rgba(255, 255, 255, 0.05);
@@ -128,7 +128,7 @@
             --danger: #ff6b6f;
             --danger-soft: rgba(255, 107, 111, 0.15);
             --map-bg: #1b2028;
-            --shadow: 0 18px 50px -12px rgba(0, 0, 0, 0.7), 0 2px 6px rgba(0, 0, 0, 0.3);
+            --shadow: 0 1px 1px rgba(0, 0, 0, 0.3), 0 10px 24px -8px rgba(0, 0, 0, 0.55), 0 32px 64px -24px rgba(0, 0, 0, 0.7);
             --shadow-sm: 0 6px 18px -6px rgba(0, 0, 0, 0.6);
             --glass-hi: rgba(255, 255, 255, 0.16);
             --glass-hi-2: rgba(255, 255, 255, 0.05);
@@ -1401,6 +1401,58 @@
         }
         .sector-new { animation: sectorIn 0.7s var(--ease); }
 
+        /* ---------- Преміальний шар ---------- */
+        :root { --bz1: #ffffff; --bz2: #d9dee5; --bz3: #aab2bd; }
+        @media (prefers-color-scheme: dark) { :root:not(.ui-light) { --bz1: #4a5566; --bz2: #262e3a; --bz3: #10151c; } }
+        :root.ui-dark { --bz1: #4a5566; --bz2: #262e3a; --bz3: #10151c; }
+
+        /* Підкладка мапи трохи приглушена, щоб сектори й інтерфейс читалися яскравіше. */
+        body:not(.map-dark):not(.night):not(.layer-satellite) .leaflet-tile-pane { filter: saturate(0.78) contrast(1.03) brightness(1.02); }
+
+        /* Компас як годинник: металевий обідок з відблиском, тінь циферблата, металева вісь. */
+        .dial .bz1 { stop-color: var(--bz1); }
+        .dial .bz2 { stop-color: var(--bz2); }
+        .dial .bz3 { stop-color: var(--bz3); }
+        .dial .bezel { fill: url(#bezelGrad); stroke: rgba(12, 20, 32, 0.12); stroke-width: 0.6; }
+        .dial .face-shade { fill: none; stroke: rgba(12, 20, 32, 0.07); stroke-width: 3; }
+        .dial .hub { fill: url(#hubGrad); stroke-width: 2.6; }
+        .dial .hub-dot { fill: #2a3240; }
+        .dial { filter: drop-shadow(0 8px 16px rgba(12, 20, 32, 0.16)) drop-shadow(0 1px 1px rgba(12, 20, 32, 0.08)); }
+
+        /* Великий азимут тонким шрифтом і сторона світу поруч — як у «Компасі» iOS. */
+        .field.az input { font-weight: 300; font-size: 2.35rem; letter-spacing: -0.045em; }
+        .field.az .unit { font-weight: 400; font-size: 1.3rem; color: var(--ink-2); }
+        .az-point {
+            align-self: center;
+            margin-left: 4px;
+            padding: 3px 7px;
+            border-radius: 7px;
+            background: var(--accent-soft);
+            color: var(--accent);
+            font: 800 0.72rem var(--font-ui);
+            letter-spacing: 0.02em;
+            white-space: nowrap;
+        }
+        .az-point:empty { display: none; }
+        .sheet.compact .az-point { display: none; }
+        .field input { font-weight: 500; }
+        .field .eyebrow { letter-spacing: 0.11em; }
+
+        /* Скляні підписи секторів на мапі. */
+        .map-label {
+            background: rgba(255, 255, 255, 0.82);
+            -webkit-backdrop-filter: blur(10px) saturate(160%);
+            backdrop-filter: blur(10px) saturate(160%);
+            border: 0.5px solid rgba(12, 20, 32, 0.08);
+            box-shadow: 0 1px 1px rgba(12, 20, 32, 0.05), 0 6px 16px -6px rgba(12, 20, 32, 0.3);
+        }
+        .map-dark .map-label, .night .map-label { background: rgba(26, 33, 44, 0.78); border-color: rgba(255, 255, 255, 0.08); }
+
+        /* Фірмові акценти з легким градієнтом. */
+        .station.has-point .station-mark { background: linear-gradient(180deg, var(--cta-1) 0%, var(--cta-2) 100%); }
+        .sectors-btn .num { font-weight: 800; }
+        .chip, .round-btn, .rail-btn, .cta, .cta-alt, .nudge-btn { transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.2s, color 0.2s, box-shadow 0.2s; }
+
         /* ---------- Wide screens ---------- */
         @media (min-width: 760px) {
             .topbar { left: 16px; right: auto; width: 440px; top: calc(16px + var(--safe-t)); }
@@ -1671,12 +1723,22 @@
                         <radialGradient id="dialFace" cx="50%" cy="35%" r="72%">
                             <stop offset="0%" class="df1"/><stop offset="100%" class="df2"/>
                         </radialGradient>
+                        <linearGradient id="bezelGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" class="bz1"/><stop offset="50%" class="bz2"/><stop offset="100%" class="bz3"/>
+                        </linearGradient>
+                        <radialGradient id="hubGrad" cx="35%" cy="30%" r="80%">
+                            <stop offset="0%" stop-color="#ffffff"/><stop offset="100%" stop-color="#b9c0ca"/>
+                        </radialGradient>
+                        <linearGradient id="needleGrad" x1="0" y1="1" x2="0" y2="0">
+                            <stop offset="0%" id="ng0"/><stop offset="100%" id="ng1"/>
+                        </linearGradient>
                         <radialGradient id="wedgeGrad" cx="0" cy="0" r="80" gradientUnits="userSpaceOnUse">
                             <stop offset="0%" id="wg0"/><stop offset="100%" id="wg1"/>
                         </radialGradient>
                     </defs>
                     <circle class="bezel" r="99"/>
                     <circle class="face" r="94"/>
+                    <circle class="face-shade" r="92.5"/>
                     <g id="dialTicks"></g>
                     <path class="wedge" id="dialWedge"/>
                     <path class="north-mark" d="M0,-93.5 L-5.5,-84 L5.5,-84 Z"/>
@@ -1686,7 +1748,7 @@
                         <circle id="dialNeedleTip" cx="0" cy="-79" r="0"/>
                     </g>
                     <circle class="hub" id="dialHub" r="7.5"/>
-                    <circle class="hub-dot" r="2.2"/>
+                    <circle class="hub-dot" r="2"/>
                 </svg>
             </div>
             <div class="fields">
@@ -1700,6 +1762,7 @@
                     <span class="field-row">
                         <input type="text" id="azInput" inputmode="decimal" enterkeyhint="done" aria-label="Азимут, градуси">
                         <span class="unit">°</span>
+                        <span class="az-point" id="azPoint" aria-hidden="true"></span>
                         <span class="nudge">
                             <button class="nudge-btn" type="button" data-step="-1" aria-label="Зменшити азимут на 1°">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M5 12h14"/></svg>
@@ -1781,7 +1844,8 @@
     var VISICOM_REGISTER_URL = 'https://api.visicom.ua/accounts/forms?action=register_form';
     var EARTH_R = 6378137;
     var DEFAULT_VIEW = { center: [48.73723, 37.58702], zoom: 16 };
-    var COLORS = ['#ff5b2e', '#2f6bff', '#13a35b', '#9b51e0', '#f2a900', '#00a3bf', '#e8417e', '#5b6b7f'];
+    // Підібрана палітра секторів: мідь, кобальт, смарагд, фіалка, золото, бірюза, троянда, графіт.
+    var COLORS = ['#f2552c', '#3d6bff', '#0fa37f', '#8e5cf7', '#e0a100', '#1aa6c9', '#e24a7f', '#5f6b7a'];
     var LIMITS = { dist: { min: 10, max: 50000 }, width: { min: 0, max: 360 } };
     var DIST_PRESETS = [250, 500, 1000, 2000, 5000, 10000];
     var MAX_FIX_RANGE = 500000; // пеленг шукаємо в радіусі 500 км від станцій
@@ -1884,6 +1948,10 @@
         return Math.round(m) + ' м';
     }
     function fmtWidth(w) { return w <= 0 ? 'промінь' : w >= 360 ? 'коло' : fmtDeg(w); }
+    // Сторона світу для азимута (8 румбів).
+    function compassPoint(az) {
+        return ['Пн', 'ПнСх', 'Сх', 'ПдСх', 'Пд', 'ПдЗх', 'Зх', 'ПнЗх'][Math.round(normAz(az) / 45) % 8];
+    }
     function fmtSigned(a) { return (a >= 0 ? '+' : '−') + Math.abs(a).toFixed(1).replace('.', ',') + '°'; }
     // Азимут сектора так, як його ввели: магнітний позначаємо «М».
     function fmtSectorAz(s) { return s.magAz != null ? fmtDeg(s.magAz) + ' М' : fmtDeg(s.az); }
@@ -2488,7 +2556,11 @@
         var az = v.inputAz == null ? 0 : v.inputAz;
         el.dialNeedle.setAttribute('transform', 'rotate(' + az + ')');
         el.dialNeedle.style.opacity = v.inputAz == null ? 0.25 : 1;
-        el.dialNeedleLine.setAttribute('fill', color);
+        // Стрілка з металевим відблиском: колір сектора, світліший до вістря.
+        document.getElementById('ng0').setAttribute('stop-color', color);
+        document.getElementById('ng1').setAttribute('stop-color', color);
+        document.getElementById('ng1').setAttribute('stop-opacity', '0.78');
+        el.dialNeedleLine.setAttribute('fill', 'url(#needleGrad)');
         el.dialHub.setAttribute('stroke', color);
         var w = v.width == null ? 0 : v.width;
         el.dialWedge.setAttribute('d', v.inputAz == null ? '' : wedgePath(az, w, 79));
@@ -2902,6 +2974,8 @@
         renderPreview(v);
         renderDial(v);
         renderAzMode(v);
+        var pt = document.getElementById('azPoint');
+        if (pt) pt.textContent = v.inputAz == null ? '' : compassPoint(v.inputAz);
         renderPresets();
         sizeInputs();
         return v;
