@@ -1905,16 +1905,6 @@ svg.leaflet-image-layer.leaflet-interactive path {
 
         /* ---------- Налаштування ---------- */
         .logo { position: relative; }
-        .logo-gear {
-            position: absolute;
-            right: -3px; bottom: -3px;
-            width: 17px; height: 17px;
-            border-radius: 50%;
-            background: var(--surface-solid);
-            color: var(--ink-2);
-            display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
-        }
         .set-title { padding: 4px 6px 6px; }
         .set-group {
             background: var(--fill);
@@ -1964,25 +1954,6 @@ svg.leaflet-image-layer.leaflet-interactive path {
         .station-group .round-btn { width: 32px; height: 32px; }
         .sector-item.in-group { padding-left: 14px; }
         .sector-item[hidden] { display: none !important; }
-
-        /* ---------- Три сектори одним натиском ---------- */
-        .cta-row { display: flex; gap: 8px; margin-top: 10px; }
-        .cta-row .cta { margin-top: 0; flex: 1; }
-        .cta-alt {
-            flex-shrink: 0;
-            height: 48px;
-            padding: 0 14px;
-            border-radius: 16px;
-            background: var(--fill-2);
-            color: var(--ink);
-            font-weight: 800;
-            font-size: 0.86rem;
-            display: flex; align-items: center; gap: 6px;
-            transition: transform 0.15s, opacity 0.2s;
-        }
-        .cta-alt:active:not(:disabled) { transform: scale(0.97); }
-        .cta-alt:disabled { opacity: 0.35; }
-        .sheet.editing .cta-alt { display: none; }
 
         /* ---------- Підписи секторів, які можна натиснути ---------- */
         .map-label.sector-lbl { pointer-events: auto; cursor: pointer; }
@@ -2054,7 +2025,6 @@ svg.leaflet-image-layer.leaflet-interactive path {
         .cta .cta-save, .sheet.editing .cta .cta-add { display: none; }
         .sheet.editing .cta .cta-save { display: block; }
         .sheet.editing .cta { background: linear-gradient(180deg, var(--cta-1) 0%, var(--cta-2) 100%); }
-        .cta-alt { background: var(--card); border: 1px solid var(--card-line); }
 
         .station-mark { box-shadow: 0 4px 10px -4px rgba(240, 82, 29, 0.5); }
         .station:not(.has-point) .station-mark { box-shadow: none; }
@@ -2116,7 +2086,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
         /* Фірмові акценти з легким градієнтом. */
         .station.has-point .station-mark { background: linear-gradient(180deg, var(--cta-1) 0%, var(--cta-2) 100%); }
         .sectors-btn .num { font-weight: 800; }
-        .chip, .round-btn, .rail-btn, .cta, .cta-alt, .nudge-btn { transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.2s, color 0.2s, box-shadow 0.2s; }
+        .chip, .round-btn, .rail-btn, .cta, .nudge-btn { transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.2s, color 0.2s, box-shadow 0.2s; }
 
         /* ---------- Доведення деталей ---------- */
         /* Масштаб: тонка лінія з засічками на склі замість товстої чорної рамки. */
@@ -2154,16 +2124,43 @@ svg.leaflet-image-layer.leaflet-interactive path {
             100% { transform: scale(1.7); opacity: 0; }
         }
 
-        /* Шестірня на логотипі — менша й тихіша. */
-        .logo-gear { width: 14px; height: 14px; right: -2px; bottom: -2px; box-shadow: 0 0 0 1.5px var(--surface-solid); }
-        .logo-gear svg { width: 9px; height: 9px; }
 
         /* Ритм нижньої панелі: станція відділена тонкою лінією, однакові відступи між блоками. */
         .station { padding-bottom: 10px; margin-bottom: 12px; border-bottom: 1px solid var(--line); }
         .sheet.mini .station { border-bottom: 0; padding-bottom: 0; margin-bottom: 6px; }
         .grabber::before { width: 36px; height: 4.5px; margin-left: -18px; opacity: 0.9; }
         .presets { margin-top: 12px; }
-        .cta-row { margin-top: 12px; }
+        .cta { margin-top: 12px; }
+
+        /* ---------- Екран налаштувань у стилі iOS ---------- */
+        /* Налаштування — окремий екран поверх нижньої панелі, на всю доступну висоту. */
+        .panel.settings {
+            z-index: 32;
+            max-height: calc(100vh - 70px - var(--safe-t) - var(--edge) - var(--safe-b));
+            max-height: calc(100dvh - 70px - var(--safe-t) - var(--edge) - var(--safe-b));
+        }
+        .settings .set-group { background: var(--card); border: 1px solid var(--card-line); padding: 0 14px; border-radius: 18px; }
+        .settings .set-row { min-height: 58px; }
+        .settings .set-row.stack { min-height: 54px; padding-top: 4px; }
+        .settings .set-row.stack + .look-box, .settings .set-row.stack + .key-box { border-top: 0; padding: 0 0 14px; }
+        .set-label { display: flex; align-items: center; gap: 12px; min-width: 0; font-weight: 700; font-size: 0.92rem; }
+        .set-label small { font-weight: 600; }
+        .set-ico {
+            width: 30px; height: 30px;
+            border-radius: 8px;
+            background: var(--ico);
+            color: #ffffff;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
+        }
+        .seg-2 { grid-template-columns: repeat(2, 54px); flex-shrink: 0; }
+        .set-value { color: var(--muted); font-size: 0.8rem; font-weight: 700; }
+        .settings .about-line { border-top: 1px solid var(--line); padding: 10px 0 12px; color: var(--muted); font-size: 0.76rem; }
+        .settings .key-note { margin-bottom: 0; }
+
+        /* Картки (сектор, лінійка, пеленг) не накривають праву колонку кнопок — мапою можна користуватися далі. */
+        .info-card { right: calc(var(--edge) + var(--safe-r) + 54px); }
 
         /* ---------- Wide screens ---------- */
         @media (min-width: 760px) {
@@ -2233,10 +2230,9 @@ svg.leaflet-image-layer.leaflet-interactive path {
 <!-- Search bar -->
 <header class="topbar">
     <form class="searchbar glass" id="searchForm" role="search" autocomplete="off">
-        <button class="logo" type="button" id="settingsBtn" aria-label="Налаштування" aria-expanded="false" aria-controls="settingsPanel">
+        <span class="logo" aria-hidden="true">
             <svg width="20" height="20" viewBox="0 0 24 24"><path d="M12 12L6.2 4.4a9.5 9.5 0 0 1 11.6 0z" fill="#ff5b2e"/><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="2.2" fill="currentColor"/></svg>
-            <span class="logo-gear" aria-hidden="true"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></svg></span>
-        </button>
+        </span>
         <input type="search" id="searchInput" enterkeyhint="search" placeholder="Адреса або координати" aria-label="Адреса або координати">
         <button class="round-btn" type="button" id="searchClear" aria-label="Очистити пошук" hidden>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
@@ -2267,7 +2263,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 </section>
 
 <!-- Sector list -->
-<section class="panel glass" id="settingsPanel" hidden aria-label="Налаштування">
+<section class="panel glass settings" id="settingsPanel" hidden aria-label="Налаштування">
     <div class="panel-head">
         <h2 class="panel-title">Налаштування</h2>
         <button class="round-btn solid" data-close aria-label="Закрити">
@@ -2275,43 +2271,58 @@ svg.leaflet-image-layer.leaflet-interactive path {
         </button>
     </div>
     <div class="scroll">
-        <div class="eyebrow set-title">Вигляд мапи</div>
+        <div class="eyebrow set-title">Мапа</div>
         <div class="set-group">
-    <div class="look-box">
-        <div class="eyebrow">Вигляд мапи</div>
-        <div class="seg" id="lookSeg" role="radiogroup" aria-label="Вигляд мапи">
-            <button type="button" role="radio" data-look="auto">Авто</button>
-            <button type="button" role="radio" data-look="light">Світла</button>
-            <button type="button" role="radio" data-look="dark">Темна</button>
-            <button type="button" role="radio" data-look="night">Нічна</button>
-        </div>
-    </div>
+            <div class="set-row stack">
+                <span class="set-label"><i class="set-ico" style="--ico:#3d6bff"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2z"/><path d="M9 4v14M15 6v14"/></svg></i><span>Вигляд мапи<small>«Нічна» — червоне підсвічування для роботи в темряві</small></span></span>
+            </div>
+            <div class="look-box">
+                <div class="seg" id="lookSeg" role="radiogroup" aria-label="Вигляд мапи">
+                    <button type="button" role="radio" data-look="auto">Авто</button>
+                    <button type="button" role="radio" data-look="light">Світла</button>
+                    <button type="button" role="radio" data-look="dark">Темна</button>
+                    <button type="button" role="radio" data-look="night">Нічна</button>
+                </div>
+            </div>
         </div>
 
-        <div class="eyebrow set-title">Компас і мапа</div>
+        <div class="eyebrow set-title">Компас</div>
         <div class="set-group">
+            <div class="set-row">
+                <span class="set-label"><i class="set-ico" style="--ico:#0fa37f"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/></svg></i><span>Азимут<small>Істинний чи магнітний (із схиленням)</small></span></span>
+                <div class="seg seg-2" id="azDefaultSeg" role="radiogroup" aria-label="Тип азимута">
+                    <button type="button" role="radio" data-mode="true">Іст</button>
+                    <button type="button" role="radio" data-mode="mag">Маг</button>
+                </div>
+            </div>
             <label class="set-row" for="soundToggle">
-                <span>Звук прокрутки компаса<small>Клацання на кожному градусі</small></span>
+                <span class="set-label"><i class="set-ico" style="--ico:#f2552c"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg></i><span>Звук прокрутки<small>Клацання на кожному градусі</small></span></span>
                 <input type="checkbox" switch id="soundToggle">
             </label>
         </div>
 
-        <div class="eyebrow set-title">Ключ Visicom</div>
+        <div class="eyebrow set-title">Visicom</div>
         <div class="set-group">
-    <div class="key-box">
-        <div class="eyebrow">Ключ Visicom</div>
-        <form class="key-row" id="visicomKeyForm" autocomplete="off">
-            <input type="text" id="visicomKeyInput" placeholder="Вставте API-ключ" spellcheck="false" autocapitalize="off" aria-label="API-ключ Visicom">
-            <button class="chip" type="submit">Зберегти</button>
-        </form>
-        <p class="key-note" id="visicomKeyNote"></p>
+            <div class="set-row stack">
+                <span class="set-label"><i class="set-ico" style="--ico:#8e5cf7"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4"/><path d="M10.8 12.2L20 3M16 7l3 3M14 9l2 2"/></svg></i><span>Ключ мапи Visicom<small>Для мапи «Візіком» без напису про обмеження</small></span></span>
             </div>
+            <div class="key-box">
+                <form class="key-row" id="visicomKeyForm" autocomplete="off">
+                    <input type="text" id="visicomKeyInput" placeholder="Вставте API-ключ" spellcheck="false" autocapitalize="off" aria-label="API-ключ Visicom">
+                    <button class="chip" type="submit">Зберегти</button>
+                </form>
+                <p class="key-note" id="visicomKeyNote"></p>
+            </div>
+        </div>
 
         <div class="eyebrow set-title">Про застосунок</div>
         <div class="set-group">
-            <div class="about-line">Azimuth Map · версія <span class="num">3662a62bff82</span><br>
-            Дані мап: OpenStreetMap, Visicom, Esri. Адреси: Visicom, OpenStreetMap Nominatim.<br>
-            Магнітне схилення: World Magnetic Model 2025 (NOAA).</div>
+            <div class="set-row">
+                <span class="set-label"><i class="set-ico" style="--ico:#5f6b7a"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></svg></i><span>Azimuth Map</span></span>
+                <span class="set-value num">8cfa39a23325</span>
+            </div>
+            <div class="about-line">Дані мап: OpenStreetMap, Visicom, Esri. Адреси: Visicom, OpenStreetMap Nominatim.
+                Магнітне схилення: World Magnetic Model 2025 (NOAA).</div>
         </div>
     </div>
 </section>
@@ -2382,6 +2393,11 @@ svg.leaflet-image-layer.leaflet-interactive path {
         </button>
         <button class="rail-btn" id="locateBtn" aria-label="Моє місцезнаходження">
             <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M3 11l18-8-8 18-2-8z"/></svg>
+        </button>
+    </div>
+    <div class="rail-group glass hideable">
+        <button class="rail-btn" id="settingsBtn" aria-label="Налаштування" aria-expanded="false" aria-controls="settingsPanel">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
         </button>
     </div>
     <div class="rail-group glass">
@@ -2505,18 +2521,12 @@ svg.leaflet-image-layer.leaflet-interactive path {
 
         <div class="presets chips" id="presets"></div>
 
-        <div class="cta-row">
-            <button class="cta" type="submit" id="addBtn" disabled>
-                <span class="swatch" id="nextSwatch"></span>
-                <svg class="cta-icon cta-add" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-                <svg class="cta-icon cta-save" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
-                <span id="ctaText">Встановити сектор</span>
-            </button>
-            <button class="cta-alt" type="button" id="addThreeBtn" disabled title="Три сектори: азимут, +120°, +240°">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><path d="M12 12L8 3.5a9 9 0 0 1 8 0z"/><path d="M12 12l9.3 2.5a9 9 0 0 1-4 6.9z"/><path d="M12 12l-5.3 9.4a9 9 0 0 1-4-6.9z"/></svg>
-                ×3
-            </button>
-        </div>
+        <button class="cta" type="submit" id="addBtn" disabled>
+            <span class="swatch" id="nextSwatch"></span>
+            <svg class="cta-icon cta-add" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            <svg class="cta-icon cta-save" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+            <span id="ctaText">Встановити сектор</span>
+        </button>
     </form>
 </footer>
 
@@ -2583,7 +2593,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
         dialNeedleLine: $('dialNeedleLine'), dialNeedleTip: $('dialNeedleTip'), dialHub: $('dialHub'),
         presets: $('presets'), nextSwatch: $('nextSwatch'), addBtn: $('addBtn'),
         tileNotice: $('tileNotice'), toast: $('toast'),
-        settingsBtn: $('settingsBtn'), settingsPanel: $('settingsPanel'), addThreeBtn: $('addThreeBtn'),
+        settingsBtn: $('settingsBtn'), settingsPanel: $('settingsPanel'),
         pointCoords: $('pointCoords'), editBar: $('editBar'), editCancel: $('editCancel'),
         nameInput: $('nameInput'), colorRow: $('colorRow'), ctaText: $('ctaText'),
         azModeBtn: $('azModeBtn'), azLabel: $('azLabel'), declLine: $('declLine'), rulerBtn: $('rulerBtn'), infoCard: $('infoCard'),
@@ -3210,8 +3220,10 @@ svg.leaflet-image-layer.leaflet-interactive path {
     }
 
     function updateSheetHeight() {
-        var pageBottom = document.body.getBoundingClientRect().bottom;
-        var h = state.hud ? Math.max(0, pageBottom - el.sheet.getBoundingClientRect().top) : 0;
+        // Висота панелі разом з відступом знизу — без урахування анімації (transform), інакше під час
+        // перемикання положень шторки вимірюється старе місце й кнопки праворуч опиняються під панеллю.
+        var bottom = parseFloat(getComputedStyle(el.sheet).bottom) || 0;
+        var h = state.hud ? Math.max(0, el.sheet.offsetHeight + bottom) : 0;
         if (window.innerWidth >= 760) h = 0;
         document.documentElement.style.setProperty('--sheet-h', Math.round(h) + 'px');
     }
@@ -3681,7 +3693,6 @@ svg.leaflet-image-layer.leaflet-interactive path {
     function refreshForm() {
         var v = readInputs();
         el.addBtn.disabled = !state.selected || !v.valid;
-        el.addThreeBtn.disabled = el.addBtn.disabled;
         updatePickMarker(v);
         renderPreview(v);
         renderDial(v);
@@ -3719,6 +3730,11 @@ svg.leaflet-image-layer.leaflet-interactive path {
         Array.prototype.forEach.call(el.azModeBtn.querySelectorAll('span'), function (sp) {
             sp.classList.toggle('on', sp.getAttribute('data-mode') === state.azMode);
         });
+        Array.prototype.forEach.call(document.querySelectorAll('#azDefaultSeg button'), function (b) {
+            var on = b.getAttribute('data-mode') === state.azMode;
+            b.classList.toggle('on', on);
+            b.setAttribute('aria-checked', String(on));
+        });
         var mag = state.azMode === 'mag' && v.decl != null;
         el.declLine.hidden = !mag;
         if (mag) {
@@ -3728,6 +3744,14 @@ svg.leaflet-image-layer.leaflet-interactive path {
             el.azModeBtn.title = 'Істинний (географічний) азимут';
         }
     }
+
+    Array.prototype.forEach.call(document.querySelectorAll('#azDefaultSeg button'), function (b) {
+        b.addEventListener('click', function () {
+            state.azMode = b.getAttribute('data-mode');
+            refreshForm();
+            saveState();
+        });
+    });
 
     el.azModeBtn.addEventListener('click', function (e) {
         e.preventDefault();
@@ -4075,51 +4099,6 @@ svg.leaflet-image-layer.leaflet-interactive path {
         saveState();
         toast('Сектор ' + fmtSectorAz(sector) + ' · ' + fmtDist(sector.dist) + ' додано');
     }
-
-    // Три сектори одним натиском: азимут, +120°, +240° — типова базова станція.
-    function addThreeSectors() {
-        var v = refreshForm();
-        if (!state.selected) { toast('Спочатку оберіть точку на мапі'); return; }
-        if (!v.valid) { toast('Перевірте азимут, дальність і ширину'); return; }
-        var added = [];
-        [0, 120, 240].forEach(function (off) {
-            var input = normAz(v.inputAz + off);
-            var trueAz = normAz(input + (v.decl || 0));
-            var sec = {
-                id: newId(),
-                origin: [round(state.selected.lat, 7), round(state.selected.lng, 7)],
-                az: round(trueAz, 2),
-                dist: round(v.dist, 1),
-                width: round(v.width, 2),
-                color: nextColor(),
-                created: Date.now()
-            };
-            if (v.decl != null) {
-                sec.magAz = round(input, 2);
-                sec.decl = round(v.decl, 2);
-            }
-            state.colorSeq++;
-            state.sectors.push(sec);
-            added.push(sec);
-        });
-        markNew(added);
-        renderSectors();
-        refreshForm();
-        saveState();
-        toast('Додано 3 сектори: ' + added.map(fmtSectorAz).join(', '), {
-            label: 'Повернути',
-            run: function () {
-                var ids = added.map(function (x) { return x.id; });
-                state.sectors = state.sectors.filter(function (x) { return ids.indexOf(x.id) < 0; });
-                renderSectors();
-                saveState();
-            }
-        });
-    }
-    el.addThreeBtn.addEventListener('click', function () {
-        if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
-        addThreeSectors();
-    });
 
     el.sectorForm.addEventListener('submit', function (e) {
         e.preventDefault();
