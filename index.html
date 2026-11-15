@@ -2118,6 +2118,53 @@ svg.leaflet-image-layer.leaflet-interactive path {
         .sectors-btn .num { font-weight: 800; }
         .chip, .round-btn, .rail-btn, .cta, .cta-alt, .nudge-btn { transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.2s, color 0.2s, box-shadow 0.2s; }
 
+        /* ---------- Доведення деталей ---------- */
+        /* Масштаб: тонка лінія з засічками на склі замість товстої чорної рамки. */
+        .leaflet-control-scale-line {
+            background: var(--surface) !important;
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            border: 1.5px solid var(--ink-2) !important;
+            border-top: 0 !important;
+            border-radius: 0 0 5px 5px;
+            color: var(--ink-2);
+            font: 700 9.5px var(--font-num);
+            padding: 1px 6px 2px;
+            line-height: 1.3;
+        }
+
+        /* Активне поле: тонка оранжева обвідка з м'яким сяйвом, без суцільної заливки. */
+        .field:focus-within {
+            background: var(--card);
+            border-color: var(--accent);
+            box-shadow: 0 0 0 4px var(--accent-soft);
+        }
+
+        /* Ряд швидких значень плавно зникає біля краю — видно, що його можна гортати. */
+        .presets {
+            -webkit-mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 36px), transparent 100%);
+            mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 36px), transparent 100%);
+            padding-right: 36px;
+        }
+
+        /* Ореол маркера станції — легкий і рідкий, не перекриває мапу. */
+        .pick-pulse { opacity: 0.18; animation: pickPulse 2.6s ease-out infinite; }
+        @keyframes pickPulse {
+            0% { transform: scale(0.6); opacity: 0.32; }
+            100% { transform: scale(1.7); opacity: 0; }
+        }
+
+        /* Шестірня на логотипі — менша й тихіша. */
+        .logo-gear { width: 14px; height: 14px; right: -2px; bottom: -2px; box-shadow: 0 0 0 1.5px var(--surface-solid); }
+        .logo-gear svg { width: 9px; height: 9px; }
+
+        /* Ритм нижньої панелі: станція відділена тонкою лінією, однакові відступи між блоками. */
+        .station { padding-bottom: 10px; margin-bottom: 12px; border-bottom: 1px solid var(--line); }
+        .sheet.mini .station { border-bottom: 0; padding-bottom: 0; margin-bottom: 6px; }
+        .grabber::before { width: 36px; height: 4.5px; margin-left: -18px; opacity: 0.9; }
+        .presets { margin-top: 12px; }
+        .cta-row { margin-top: 12px; }
+
         /* ---------- Wide screens ---------- */
         @media (min-width: 760px) {
             .topbar { left: 16px; right: auto; width: 440px; top: calc(16px + var(--safe-t)); }
@@ -2262,7 +2309,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 
         <div class="eyebrow set-title">Про застосунок</div>
         <div class="set-group">
-            <div class="about-line">Azimuth Map · версія <span class="num">6e88a6e258bc</span><br>
+            <div class="about-line">Azimuth Map · версія <span class="num">3662a62bff82</span><br>
             Дані мап: OpenStreetMap, Visicom, Esri. Адреси: Visicom, OpenStreetMap Nominatim.<br>
             Магнітне схилення: World Magnetic Model 2025 (NOAA).</div>
         </div>
